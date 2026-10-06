@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0 implementation baseline; local cluster acceptance pending virtualization enablement
+> **Project status:** M0 complete and verified locally; next milestone is M1
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -568,6 +568,10 @@ Deliver:
 - reproducible setup command
 
 **Acceptance:** fresh checkout reaches healthy state with one documented command sequence.
+
+**Status:** Complete, verified 2026-10-06. A clean Git checkout created an empty
+kind cluster and passed the frontend/API/PostgreSQL and Prometheus smoke checks.
+Repeating setup preserved the PostgreSQL pod and PVC and passed verification.
 
 ---
 

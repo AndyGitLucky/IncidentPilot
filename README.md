@@ -28,8 +28,9 @@ On Linux/macOS with PowerShell 7, use `pwsh -NoProfile -File ./scripts/setup.ps1
 No host Python, Helm, registry account, or manually installed kind is needed.
 The script downloads kind v0.33.0 and verifies its published SHA-256 checksum,
 creates the pinned single-node `incidentpilot` cluster, builds and loads the
-images using a single-platform archive, applies manifests, waits for all deployments, and runs an HTTP smoke
-check. It is safe to rerun: the existing cluster and PostgreSQL PVC are reused,
+images using a single-platform archive, applies manifests, waits for all
+deployments, and runs an HTTP smoke check. It is safe to rerun: the existing
+cluster and PostgreSQL PVC are reused,
 and API/frontend pods restart to pick up rebuilt images.
 
 Open [the demo](http://localhost:8080) and [Prometheus](http://localhost:9090).
@@ -120,14 +121,14 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
 
 ## Milestone status
 
-- M0: application and setup implemented; cluster acceptance remains unverified.
-- Next unfinished acceptance criterion: run setup on a host with working Docker,
-  confirm a healthy fresh cluster, and rerun setup to confirm repeatability.
-- After M0 acceptance: M1, reproducible bad-image injection and restoration.
+- **M0 complete:** healthy app, local cluster, health checks, scraped metric,
+  and reproducible setup verified.
+- Next: M1, reproducible bad-image injection and deterministic restoration.
 
 ## Validation record
 
-2026-10-06 baseline checks:
+2026-10-06 M0 acceptance checks on Windows, Docker Engine 29.2.0, kind v0.33.0,
+and Kubernetes v1.35.8:
 
 - `uv run --frozen pytest`: **5 passed** on Python 3.12.13; one upstream
   Starlette/AnyIO deprecation warning.
@@ -135,9 +136,18 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
 - Kustomize renders 13 resources; namespace assignments and the generated SQL
   ConfigMap reference are verified.
 - kind v0.33.0 downloads, matches its published SHA-256 checksum, and runs.
-- Setup stops at its Docker preflight: Docker Desktop's Linux engine returns
-  HTTP 500, and Windows reports firmware virtualization disabled.
+- A clean Git checkout of `ed9fce0`, with no existing demo cluster or local
+  tools/kubeconfig, reaches a healthy state using the documented setup command.
+  Docker's image/build cache was reused.
+- Frontend, API, PostgreSQL, and Prometheus deployments each reach `1/1` ready.
+- HTTP checks pass for the frontend, database health, seeded database message,
+  and Prometheus metric exposition.
+- Prometheus reports `up{job="demo-api"} = 1` and a nonzero
+  `demo_api_requests_total{outcome="success",job="demo-api"}` counter.
+- Repeating setup passes the smoke checks again and preserves PostgreSQL's
+  PVC UID and pod UID.
 
-Container builds, a healthy cluster, HTTP smoke verification, and setup reruns
-could not be tested on this host. M0 acceptance is pending those checks; this
-commit provides the implementation baseline, not evidence of cluster recovery.
+The initial firmware virtualization blocker was resolved by enabling SVM in
+BIOS. The Docker containerd image-import issue is handled by platform-filtered
+archives in setup; see [DECISIONS.md](DECISIONS.md). Runtime verification was on
+Windows/amd64; Linux/macOS and ARM hosts have not been tested.

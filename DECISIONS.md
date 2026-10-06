@@ -36,3 +36,16 @@ it with `kind load image-archive`, as documented in
 [kind's known issues](https://kind.sigs.k8s.io/docs/user/known-issues/#unable-to-kind-load-docker-images).
 This changes only image transport within M0. Require Docker Engine 28+ (API 1.48+)
 for platform-filtered exports; do not change Docker's host-wide image store.
+
+## 2026-10-06: M0 acceptance complete
+
+The firmware virtualization blocker is resolved. Verified the corrected setup
+from a clean checkout of `ed9fce0` with no existing kind cluster or checkout-local
+tools/kubeconfig. Docker's downloaded image/build cache was reused. Setup
+downloaded and checksum-verified kind, created the pinned cluster, built and
+loaded images, and passed the full HTTP and Prometheus smoke check.
+
+A second setup run from the main workspace reused the existing cluster and
+preserved both the PostgreSQL PVC UID and pod UID. The database-backed response
+and Prometheus scrape checks passed again. M0 is complete; M1 is the next
+milestone. No incident injection or agent implementation was added.
