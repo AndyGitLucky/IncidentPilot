@@ -211,3 +211,19 @@ verification confirm the approved live repair and unchanged unrelated pod UIDs.
 Record that evidence separately from a clean exit of the corrected acceptance
 script, which still requires a new live run and a fresh human-approved proposal.
 Do not reuse the already consumed approval or auto-approve another repair.
+
+## 2026-10-06: M3 acceptance complete
+
+The user reran the corrected acceptance script, denied one proposal without
+writes and approved a fresh proposal, `dc5970d216d3eef1`. The restricted runner
+restored API generation 48 → 49 and confirmed rollout/endpoints/database-backed
+HTTP recovery. The script completed its unrelated-resource comparison and
+Prometheus smoke check, printed `M3 acceptance passed`, and left the demo healthy.
+
+Validated the saved reports, proposal integrity and execution identity/generation.
+Both the actual PowerShell function and an independent parsed-object comparison
+confirm that saved before/after snapshots preserve unrelated resource identities
+and specs. A fresh read-only health check with the separate runner credentials
+passes. Record M3 as complete and replace the earlier pending summary with this
+successful result. The prior failed run remains historical; no approval is reused.
+M0–M4 are complete. M5's repeated evaluation and observability are next.

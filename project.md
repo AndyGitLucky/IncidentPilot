@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0–M2 and M4 complete; M3 implemented, interactive live repair acceptance pending
+> **Project status:** M0–M4 complete; next milestone: M5 — Evaluation + Observability
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -642,21 +642,18 @@ Deliver:
 
 **Acceptance:** agent proposes correct repair; nothing is changed before approval; cluster returns healthy after approval.
 
-**Status:** Implemented 2026-10-06 for `bad_image` only. Added deterministic cited
-proposals, a LangGraph human approval interrupt, separate narrowly scoped repair
-credentials, atomic known-image restoration, and rollout/database-backed HTTP
-verification. All 73 tests pass; live RBAC and healthy-state verification pass.
-The user completed live denial and approved repair on 2026-10-06: API generation
-46 → 47, with rollout/database-backed HTTP recovery confirmed. A Windows
-PowerShell JSON-array filtering bug falsely failed the final unrelated-resource
-assertion. The comparison is fixed and regression-tested; full snapshots are now
-saved for future checks. The original historical full-spec comparison cannot be
-replayed because those snapshots were not saved. A clean corrected-script live
-run remains pending; see `eval/results/m3-2026-10-06.json`. OpenRouter export was
-authorized for M4 and all five live diagnoses/proposals/denials passed. The user
-explicitly requested M4 despite the older sequencing restriction. See README and
-`scripts/verify-repair.ps1` for approved bad-image acceptance, or
-`scripts/verify-incidents.ps1 -HumanRepair` for all five approved repair paths.
+**Status:** Complete, verified 2026-10-06 for `bad_image`. The user ran the
+corrected `scripts/verify-repair.ps1`: denial preserved resource identities/specs,
+then human-approved proposal `dc5970d216d3eef1` restored the known-good image
+through the separate restricted runner, advancing API generation 48 → 49.
+Rollout, owned ready endpoints, frontend/database-backed HTTP and Prometheus
+checks passed. Saved before/after snapshots confirm unrelated workloads,
+Services, pods and volumes were unchanged. The demo remains healthy.
+Validated saved reports/proposal integrity and rechecked live health read-only.
+The earlier Windows PowerShell snapshot-filter bug is fixed and covered by the
+188-test suite. See `eval/results/m3-2026-10-06.json`. M4 extends the approved
+action implementations to all five fixtures; its other live approved execution
+paths can be exercised with `scripts/verify-incidents.ps1 -HumanRepair`.
 
 ---
 
@@ -757,19 +754,16 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M2 and M4 are complete. M3's live approved repair and recovery are verified;
-rerun the corrected acceptance script for a clean unrelated-resource check:
+M0–M4 are complete. Implement M5 — Evaluation + Observability:
 
 ```text
-cited diagnosis
-→ repair proposal
-→ human approval
-→ restricted known-image restore
-→ rollout and application health verification
+repeated incident runs
+→ benchmark result artifact and metrics table
+→ OpenTelemetry traces
+→ one Grafana dashboard
+→ README results
 ```
 
-Run `scripts/verify-repair.ps1` for bad-image acceptance, or
-`scripts/verify-incidents.ps1 -HumanRepair` for all five repair paths, after
-provisioning both reader and repair tokens. No agent writes before approval.
-Keep read-only diagnosis credentials separate from the allowlisted repair runner.
-Then proceed to M5's repeated evaluation and observability; add no incident types.
+Keep the five fixed incidents and existing safety boundary. Every agent repair
+still requires human approval; read-only diagnosis credentials remain separate
+from the allowlisted repair runner. Add no incident types or unrelated systems.

@@ -392,13 +392,13 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   and three live inject/restore cycles verified.
 - **M2 complete:** read-only Kubernetes/logs MCP, LangGraph evidence collection,
   and a live OpenRouter diagnosis with validated citations.
-- **M3 implemented:** cited fixed-image proposals, human approval, restricted
-  repair runner, and automatic verification. The user's live approved repair
-  recovered successfully; a corrected full-script acceptance rerun remains pending.
+- **M3 complete:** cited fixed-image proposal, denied execution without writes,
+  human-approved restricted live repair, recovery and unchanged unrelated
+  resources verified by the corrected acceptance script.
 - **M4 complete:** all five fixtures, evidence validation, fixed repair proposals,
   runbooks, and live diagnosis/denial/manual recovery evaluation passed.
-- Next: interactive approved-repair acceptance, followed by M5 benchmarks and
-  observability. See the decision recording the user's explicit M4 request.
+- Next: M5 benchmarks and observability. See the decision recording the user's
+  explicit M4 request before M3's live acceptance was finished.
 
 ## Validation record
 
@@ -528,3 +528,17 @@ sequence. This is a single live M2 acceptance sequence, not the M5 benchmark.
 - All 188 tests pass. The cluster remains healthy; the fix performs no repair
   and does not reuse the consumed approval. To get a clean full-script result,
   rerun `scripts/verify-repair.ps1` and approve its fresh proposal.
+
+2026-10-06 M3 full acceptance completed:
+
+- The user reran the corrected script and approved proposal `dc5970d216d3eef1`.
+  The script printed `M3 acceptance passed`; API generation advanced 48 → 49,
+  the known-good image was restored and automatic rollout/endpoints/HTTP/database
+  verification passed. Full HTTP/Prometheus verification and cleanup also passed.
+- Revalidated `.local/m3/denied.json` and `approved.json`, then compared the saved
+  `before.json`/`after.json` using the actual PowerShell comparison function and
+  an independent parsed-object check. Unrelated workload/Service/pod/PVC identities
+  and specs match. A fresh read-only runner verification confirms live health.
+- Updated the [M3 result artifact](eval/results/m3-2026-10-06.json) to record full
+  acceptance success. M0–M4 are complete; M5 is next. No new incident or repair
+  was initiated while recording this result.

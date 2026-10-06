@@ -301,3 +301,31 @@ parsing and diff checks pass. Recorded a non-sensitive M3 result that distinguis
 successful live approved recovery from a clean corrected acceptance-script exit.
 The cluster is healthy. A fresh full-script run still needs its own human approval;
 the snapshot filter fix and regression validation are complete.
+
+## 2026-10-06 — M3: full live acceptance complete
+
+The user reran `scripts/verify-repair.ps1` and reported `M3 acceptance passed`.
+Saved reports confirm denial without execution and human-approved proposal
+`dc5970d216d3eef1`, which restored the known-good image with API generation
+48 → 49 and completed rollout/endpoints/frontend/database-backed HTTP recovery.
+The script's smoke checks and final fixture cleanup passed.
+
+Revalidated report schemas, citations, proposal hash, execution identity/generation
+and recovery timing. Compared saved full before/after snapshots with the actual
+PowerShell function and an independent parsed-object check: unrelated workloads,
+Services, pods and PVC identities/specs match. A fresh read-only check using the
+separate runner credentials confirms live health. No provider request, new
+injection, repair or approval reuse was performed while recording completion.
+
+Updated the non-sensitive M3 result artifact, project/README status and decisions.
+Documentation/result-only change; report/snapshot/live-health checks and Git diff
+validation passed. The existing source/test baseline remains 188 passing tests.
+
+### Current handoff
+
+- **M0–M4 complete.** M3's full corrected acceptance script passed with explicit
+  human approval; the kind demo is healthy.
+- Raw M3 reports and full snapshots remain ignored under `.local/m3`.
+- Next: **M5 — repeated evaluation, metrics table, OpenTelemetry traces, one
+  Grafana dashboard and README results**. Maintain the five fixed incidents and
+  human approval for every agent repair.
