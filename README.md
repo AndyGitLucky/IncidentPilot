@@ -5,8 +5,9 @@ milestones are in [project.md](project.md); implementation choices are in
 [DECISIONS.md](DECISIONS.md). See [projectlog.md](projectlog.md) for the brief
 implementation history and current handoff notes.
 
-The M0 baseline supplies a healthy **frontend → API → PostgreSQL** application
-and a Prometheus scrape. Incident injection and the agent begin in later milestones.
+The demo supplies a healthy **frontend → API → PostgreSQL** application and a
+Prometheus scrape. M1 adds a reproducible bad-image incident with manual injection
+and deterministic restoration. The agent begins in M2.
 
 ## Fresh checkout setup
 
@@ -58,6 +59,51 @@ Rerun verification without rebuilding:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
+
+## M1: bad image tag
+
+After setup, inject the incident:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\incidents\bad_image\inject.ps1
+```
+
+The script changes only the API container image to
+`incidentpilot-api:m1-does-not-exist`. It succeeds after observing a new API pod
+waiting with `ErrImageNeverPull` and a matching Warning event for that pod UID,
+then prints the pod/event evidence. It waits up to 90 seconds by default; pass
+`-TimeoutSeconds 120` to either incident script to adjust its Kubernetes wait.
+
+The app images are loaded directly into kind and use `imagePullPolicy: Never`,
+so this fixture requires no registry access. The failure is **ErrImageNeverPull**.
+The new container never starts and has no application logs. With the normal
+rolling update strategy, the old healthy API pod remains available: HTTP checks
+can still pass while the rollout is stalled. Detect this case through Kubernetes
+pod state, deployment image, and events.
+
+Restore the fixed healthy image and verify recovery:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\incidents\bad_image\restore.ps1
+```
+
+Restoration sets `incidentpilot-api:m0`, waits for exactly one updated, ready,
+available API replica, and runs `scripts/verify.ps1` to check the complete
+frontend/API/database path and Prometheus scrape. It does not depend on rollout
+history. Both scripts always use this checkout's `.local/kubeconfig`, context
+`kind-incidentpilot`, and namespace `incidentpilot`.
+
+Repeat the two commands to replay the incident. Injection and restoration are
+also safe to repeat individually. If injection times out, inspect the pods and
+events below, then run restoration; a failed injection does not restore itself.
+If a script rejects an unexpected API image, pull policy, or replica count,
+inspect the deployment or rerun setup to return to the demo fixture.
+
+Ground truth and expected observations are in
+[ground_truth.yaml](incidents/bad_image/ground_truth.yaml) and
+[expected_evidence.yaml](incidents/bad_image/expected_evidence.yaml).
+Historical Warning events can remain after recovery; current pod state and
+rollout completion determine whether the incident is still active.
 
 ## Inspect and reset
 
@@ -124,7 +170,9 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
 
 - **M0 complete:** healthy app, local cluster, health checks, scraped metric,
   and reproducible setup verified.
-- Next: M1, reproducible bad-image injection and deterministic restoration.
+- **M1 complete:** bad-image injection, pod/event evidence, fixed-image restore,
+  and three live inject/restore cycles verified.
+- Next: M2, read-only diagnosis of the bad-image incident with cited evidence.
 
 ## Validation record
 
@@ -152,3 +200,19 @@ The initial firmware virtualization blocker was resolved by enabling SVM in
 BIOS. The Docker containerd image-import issue is handled by platform-filtered
 archives in setup; see [DECISIONS.md](DECISIONS.md). Runtime verification was on
 Windows/amd64; Linux/macOS and ARM hosts have not been tested.
+
+2026-10-06 M1 acceptance on the same Windows/amd64 kind cluster:
+
+- Three inject/restore cycles each produced an `ErrImageNeverPull` pod and
+  Warning event, then restored the baseline rollout and passed all smoke checks.
+- Repeated injection while broken and repeated restoration while healthy passed.
+- Frontend, PostgreSQL, and Prometheus pod UIDs and the database PVC UID stayed
+  unchanged during repeat validation.
+- Both scripts succeeded with an unrelated `KUBECONFIG` environment variable,
+  confirming they use the explicit checkout-local configuration.
+- All three M1 PowerShell files parse under Windows PowerShell 5.1.
+- `uv run --frozen pytest`: **5 passed**. Used `.local/uv-cache` because the
+  sandbox could not write the host uv cache. The existing pytest cache also
+  reported write warnings; all tests completed successfully.
+
+The cluster was left healthy with `deployment/api` using `incidentpilot-api:m0`.

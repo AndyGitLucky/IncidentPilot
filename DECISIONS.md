@@ -49,3 +49,25 @@ A second setup run from the main workspace reused the existing cluster and
 preserved both the PostgreSQL PVC UID and pod UID. The database-backed response
 and Prometheus scrape checks passed again. M0 is complete; M1 is the next
 milestone. No incident injection or agent implementation was added.
+
+## 2026-10-06: M1 bad-image fixture
+
+Use checkout-local PowerShell scripts in `incidents/bad_image`, consistent with
+the M0 host tooling. Inject only the API image reference:
+`incidentpilot-api:m0` → `incidentpilot-api:m1-does-not-exist`. Preserve the
+existing `imagePullPolicy: Never` so the missing-tag failure is reproducible
+without registry credentials or network access. The expected pod/event reason
+is `ErrImageNeverPull`, rather than `ImagePullBackOff`.
+
+Preserve the normal rolling update strategy. The new pod fails to start and the
+rollout stalls while the old ready API replica can still serve requests. M1
+requires an observable image failure, not a forced application outage. Injection
+must observe the missing-image pod state and a Warning event for that pod UID;
+HTTP health alone is insufficient evidence.
+
+Restoration sets the fixed known-good image, waits for rollout completion, and
+runs the existing HTTP/database/Prometheus verification. Do not use `rollout undo`,
+whose target depends on revision history. Both scripts use the checkout's
+kubeconfig and explicit demo context/namespace and reject unexpected API fixture
+configuration. These are manual M1 scripts; an agent and its approval/action
+runner remain M2/M3 work. No MVP scope change.

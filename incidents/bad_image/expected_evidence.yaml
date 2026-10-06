@@ -1,0 +1,20 @@
+incident_id: bad_image
+evidence:
+  - source: kubernetes
+    resource: deployment/api
+    field: spec.template.spec.containers[name=api].image
+    expected: incidentpilot-api:m1-does-not-exist
+  - source: kubernetes
+    resource: pod owned by the new API ReplicaSet
+    field: status.containerStatuses[name=api].state.waiting.reason
+    expected: ErrImageNeverPull
+  - source: events
+    resource: Warning event whose involvedObject.uid matches the failed pod
+    field: reason
+    expected: ErrImageNeverPull
+    message_contains: incidentpilot-api:m1-does-not-exist
+limitations:
+  - With Never, expect ErrImageNeverPull rather than ImagePullBackOff.
+  - The container never starts, so application logs are not required evidence.
+  - RollingUpdate retains the old healthy pod; HTTP health alone cannot detect this incident.
+  - Historical Warning events may remain after restoration; check current pod state and rollout.

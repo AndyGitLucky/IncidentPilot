@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0 complete and verified locally; next milestone is M1
+> **Project status:** M0 and M1 complete and verified locally; next milestone is M2
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -590,6 +590,12 @@ Deliver:
 - ground truth
 
 **Acceptance:** incident can be injected and restored repeatedly.
+
+**Status:** Complete, verified 2026-10-06. Three live bad-image inject/restore
+cycles produced `ErrImageNeverPull` pod state and Warning events, then restored
+the fixed healthy image and passed rollout, HTTP/database, and Prometheus checks.
+Repeated injection and restoration also passed; unrelated service pods and the
+PostgreSQL PVC remained unchanged. See `incidents/bad_image` and README commands.
 
 ---
 

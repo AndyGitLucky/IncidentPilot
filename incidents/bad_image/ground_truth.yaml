@@ -1,0 +1,35 @@
+incident_id: bad_image
+incident_type: bad container image tag
+namespace: incidentpilot
+target:
+  kind: Deployment
+  name: api
+  container: api
+injection_script: incidents/bad_image/inject.ps1
+restore_script: incidents/bad_image/restore.ps1
+healthy_image: incidentpilot-api:m0
+injected_image: incidentpilot-api:m1-does-not-exist
+image_pull_policy: Never
+ground_truth_root_cause: >-
+  The API deployment references an image tag absent from the kind node.
+  With imagePullPolicy Never, kubelet cannot start the new container and
+  reports ErrImageNeverPull. This is a bad image reference, not an
+  application crash or a registry authentication/network failure.
+observable_symptoms:
+  - New API pod remains Pending with container waiting reason ErrImageNeverPull.
+  - Pod Warning events report ErrImageNeverPull for the missing image.
+  - API rollout cannot complete; the previous ready replica may still serve traffic.
+approved_repair_action:
+  action: rollback_image_tag
+  parameters:
+    namespace: incidentpilot
+    deployment: api
+    container: api
+    image: incidentpilot-api:m0
+  implementation: Restore the fixed healthy image with kubectl set image, not rollout undo.
+  approval: Manually invoking restore.ps1 authorizes this M1 fixture restoration; no agent exists yet.
+verification_condition:
+  - Deployment template references incidentpilot-api:m0 and its generation is observed.
+  - API rollout completes with exactly one updated, ready, available replica.
+  - No nonterminating API pod references the bad image.
+  - scripts/verify.ps1 passes frontend, database-backed API, and Prometheus scrape checks.

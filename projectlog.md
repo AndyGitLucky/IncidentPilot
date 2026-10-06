@@ -58,3 +58,40 @@ work, including changes, checks, related decisions, and the next unfinished step
 Added this log and linked it from the session bootstrap and README so future
 sessions can find the implementation history. Rechecked the live cluster: its
 node is Ready and all four deployments are healthy. No runtime changes.
+
+## 2026-10-06 — M1: reproducible bad-image incident
+
+1. Read the specification, decisions, history, source, manifests, and tests.
+   Confirmed the M0 cluster was healthy before changing the API image.
+2. Added `incidents/bad_image/inject.ps1`, `restore.ps1`, their shared fixed-fixture
+   helper, ground truth, and expected evidence. See the
+   [M1 fixture decision](DECISIONS.md#2026-10-06-m1-bad-image-fixture).
+3. Injection sets only the API image to `incidentpilot-api:m1-does-not-exist`.
+   Keeping the baseline `Never` pull policy produces `ErrImageNeverPull`
+   deterministically without a registry. Success requires both a current failed
+   pod and its matching Warning event. The old ready API replica stays available.
+4. Restoration sets `incidentpilot-api:m0`, waits for the observed deployment
+   generation and one updated/ready/available replica, rejects active bad-image
+   pods, and runs the existing full HTTP/database/Prometheus smoke check.
+5. Ran three live inject/restore cycles; all passed. Also repeated injection
+   while broken and restoration while healthy. The failed pods had distinct UIDs
+   on each cycle. Non-API pods and the PostgreSQL PVC retained their UIDs during
+   repeat validation. An unrelated `KUBECONFIG` did not affect either script.
+6. All M1 scripts parse under Windows PowerShell 5.1; all five API tests passed.
+   Redirected uv cache to `.local/uv-cache` after sandbox denial at the host
+   cache. Pytest emitted existing cache write warnings and the upstream
+   Starlette/AnyIO deprecation warning; tests completed successfully.
+7. Documented commands, failure semantics, recovery, and limitations in README.
+   Marked M1 complete. Left the cluster healthy on the baseline API image.
+
+### Current handoff
+
+- **M0 and M1 complete**, verified locally on Windows/amd64.
+- Next unfinished acceptance criterion: **M2 — read-only agent diagnosis** for
+  the bad-image case, using Kubernetes/events/logs tools and cited evidence.
+- For M2, do not treat successful HTTP health as proof that a rollout is healthy.
+  This fixture preserves the previous ready replica during the image failure.
+- Ground truth: `incidents/bad_image/ground_truth.yaml`; evidence expectations:
+  `incidents/bad_image/expected_evidence.yaml`.
+- No AI, MCP, agent repair runner, additional incident type, or infrastructure
+  was added.
