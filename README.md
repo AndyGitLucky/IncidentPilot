@@ -142,6 +142,10 @@ first request, so the existing public `https://local.incidentpilot/` entry is
 not reused. The display name sent to OpenRouter is IncidentPilot; the user can
 confirm its rendering in account analytics. The earlier public entry remains
 unchanged; OpenRouter requires support to change an existing entry's stored visibility.
+The user's latest screenshot confirms the existing `local.incidentpilot` entry
+still displays IncidentPilot after a request carrying hidden. Read-only generation
+metadata confirms the fresh private identifier has a separate app ID and the
+expected origin; its activity display name still awaits confirmation.
 See [OpenRouter's attribution guide](https://openrouter.ai/docs/app-attribution).
 
 Inspect the exact evidence locally, without making an LLM request:

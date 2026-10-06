@@ -469,3 +469,26 @@ checks are not substituted for that observation.
 All **229 tests pass**; captured outbound headers and diff checks pass. Updated
 README and decision record. No incident evidence or cluster mutation was involved;
 M5's live benchmark remains pending explicit evidence-export approval.
+
+## 2026-10-06 — Resolve final attribution screenshot's URL mismatch
+
+The user's latest screenshot shows IncidentPilot but its tooltip URL is
+`https://local.incidentpilot/`, the existing entry used by the 16:57:50 test.
+That test did carry hidden, so the screenshot confirms the existing entry's
+proper name persisted; it does not confirm the fresh private entry's activity
+name or establish a visibility change for the existing entry.
+
+Read only the two already-sent generations via OpenRouter's authenticated
+generation-metadata endpoint, with no new model request or incident export.
+Both metadata lookups returned HTTP 200. The existing named test has app ID
+5231381 and origin `https://local.incidentpilot/`. The 16:59:28 fresh hidden test
+has a distinct app ID 5231546 and origin
+`https://local.incidentpilot-private/`. Thus the private request was attributed
+to a separate app as configured, not grouped into the previous public entry.
+Its public-page content remains unavailable in the earlier check; its private
+activity display name still awaits observation. Safe metadata is ignored in
+`.local/openrouter-attribution-inspection.json`.
+
+Updated README/handoff with that distinction. Documentation-only change;
+metadata consistency and diff checks pass. Runtime configuration remains the
+named private identifier with hidden; the last full code validation is 229 tests.
