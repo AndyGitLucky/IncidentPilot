@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0 and M1 complete and verified locally; next milestone is M2
+> **Project status:** M0, M1, and M2 complete and verified locally; next milestone is M3
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -621,6 +621,14 @@ Deliver:
 
 No repair yet.
 
+**Status:** Complete, verified 2026-10-06. Official Kubernetes/logs MCP servers
+collect evidence using namespace-scoped read-only credentials. LangGraph
+`COLLECT → HYPOTHESIZE` calls OpenRouter (`openai/gpt-4.1-mini`) for structured
+diagnosis, then validates citations against the current deployment, owned failed
+pod, and matching Warning event. Live healthy/injected/restored checks passed;
+diagnosis did not change demo resources. All 40 tests passed. See README and
+`scripts/verify-diagnosis.ps1`. No repair proposal or execution was added.
+
 ---
 
 ## M3 — Human-Approved Repair
@@ -677,8 +685,8 @@ Do not start with LangGraph before the failure is reproducible manually.
 Portfolio-ready means:
 
 - [ ] five incidents reproducible
-- [ ] read-only evidence collection works
-- [ ] structured diagnosis works
+- [x] read-only evidence collection works
+- [x] structured diagnosis works
 - [ ] repair requires approval
 - [ ] repairs use allowlisted actions
 - [ ] recovery is automatically verified
@@ -721,17 +729,16 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-**Do not begin with the AI agent.**
-
-Begin with:
+M0–M2 are complete. Implement M3 for the existing bad-image incident only:
 
 ```text
-local Kubernetes
-→ minimal application
-→ healthy state
-→ inject bad image tag
-→ observe Crash/Pull failure
-→ restore healthy state
+cited diagnosis
+→ repair proposal
+→ human approval
+→ restricted known-image restore
+→ rollout and application health verification
 ```
 
-Until this loop is deterministic, there is nothing useful for an agent to diagnose.
+No cluster changes before approval. Keep the read-only diagnosis credentials
+separate from the future allowlisted repair runner. Do not add incident types
+until M3 acceptance passes.

@@ -1,13 +1,23 @@
 [project]
 name = "incidentpilot"
 version = "0.0.1"
-description = "Controlled Kubernetes incident response: M0 demo baseline"
+description = "Controlled Kubernetes incident response with read-only diagnosis"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi==0.115.12",
     "uvicorn==0.34.2",
     "psycopg[binary]==3.2.9",
     "prometheus-client==0.21.1",
+]
+
+[project.optional-dependencies]
+agent = [
+    "httpx==0.28.1",
+    "kubernetes==35.0.0",
+    "langgraph==1.2.13",
+    "mcp==1.30.0",
+    "pydantic==2.13.5",
+    "python-dotenv==1.2.4",
 ]
 
 [dependency-groups]

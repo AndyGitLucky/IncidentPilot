@@ -103,3 +103,56 @@ and new-session prompt: automatically commit each successful task after relevant
 checks and diff review, unless the user requests uncommitted changes. Commit only
 task-related changes and report the commit hash and validation results.
 Documentation-only change; verified the diff with `git diff --check`.
+
+## 2026-10-06 — M2: read-only LLM diagnosis
+
+1. Read the specification, decisions, history, manifests, application, tests,
+   and incident fixture. Confirmed the cluster was healthy and scoped work to M2.
+2. The user chose OpenRouter and requested `.env` for the API key. Created the
+   ignored local file and tracked `.env.example`; direct dotenv loading avoids
+   reliance on VS Code terminal environment injection. The key was supplied
+   locally and never printed or committed.
+3. Added the official MCP SDK stdio servers in `mcp/`: four Kubernetes read
+   tools and one bounded Kubernetes-log tool. Added projections excluding
+   environment/Secret data and UID-based deployment/ReplicaSet/pod correlation.
+4. Added a namespace Role, ServiceAccount, and RoleBinding, plus manual
+   `setup-diagnosis.ps1` to mint a one-hour read-only kubeconfig. Diagnosis cannot
+   fall back to admin credentials or refresh its own token. Verified RBAC allows
+   reads and denies workload mutation, exec, Secret reads, and PVC deletion.
+5. Added Pydantic evidence/diagnosis/report models and LangGraph
+   `COLLECT → HYPOTHESIZE → END`. The LLM receives collected evidence through
+   OpenRouter's structured-output API. It sees no ground truth and has no repair
+   tool. Evidence validation rejects unsupported diagnoses or healthy claims,
+   invented citations, wrong pod UIDs, and historical failures. Reports retain
+   the candidate and validated diagnosis, model ID, and token usage.
+6. Initial live Gemini 2.5 Flash Lite checks misdiagnosed the healthy state;
+   validation rejected those claims. Scoped events to current API resource UIDs,
+   removed duplicated prompt evidence, used a neutral prompt, and selected
+   GPT-4.1 mini as the stronger low-cost default. See the M2 decision record.
+7. Added `--collect-only` for local inspection without external requests.
+   Automatic approval review initially rejected sending local evidence to
+   OpenRouter; the user then explicitly approved the bounded demo state, events,
+   and API logs. Subsequent live validation used that approval.
+8. All 40 tests passed, including MCP protocol, evidence/citation validation,
+   provider failures, environment loading, bounds, and data projections. Both
+   new PowerShell scripts parse under Windows PowerShell 5.1. The existing
+   upstream Starlette/AnyIO warning remains.
+9. `verify-diagnosis.ps1` passed the live healthy → injected → restored sequence
+   with GPT-4.1 mini. The injected diagnosis cited the current missing image,
+   owned failed pod, and Warning event. Resource UIDs, generations, and specs
+   stayed unchanged during each diagnosis. Manual restoration in `finally`
+   passed rollout and HTTP/database/Prometheus verification.
+10. Updated README, decisions, and milestone status. Kept agent dependencies in
+    an optional extra; re-exported the demo API requirements and confirmed no
+    change to its runtime dependency set. Reviewed the task diff before commit.
+
+### Current handoff
+
+- **M0, M1, and M2 complete**, verified on Windows/amd64.
+- The cluster is healthy on `incidentpilot-api:m0`.
+- Diagnosis: `uv run --frozen --extra agent python -m agent`.
+- Model: `openai/gpt-4.1-mini` through OpenRouter. `.env` is local and ignored.
+- Refresh the one-hour reader token with `scripts/setup-diagnosis.ps1`.
+- Live reports: `.local/m2/healthy.json`, `injected.json`, `restored.json`.
+- Next: **M3 — human-approved repair**, still limited to the bad-image case.
+  No repair proposal, approval gate, or agent action runner exists yet.

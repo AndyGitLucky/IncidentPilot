@@ -1,0 +1,37 @@
+# M2 credentials can inspect the demo namespace, but cannot mutate it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: diagnosis-reader
+  namespace: incidentpilot
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: diagnosis-reader
+  namespace: incidentpilot
+rules:
+  - apiGroups: [""]
+    resources: [pods, events]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: diagnosis-reader
+  namespace: incidentpilot
+subjects:
+  - kind: ServiceAccount
+    name: diagnosis-reader
+    namespace: incidentpilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: diagnosis-reader

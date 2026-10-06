@@ -71,3 +71,49 @@ whose target depends on revision history. Both scripts use the checkout's
 kubeconfig and explicit demo context/namespace and reject unexpected API fixture
 configuration. These are manual M1 scripts; an agent and its approval/action
 runner remain M2/M3 work. No MVP scope change.
+
+## 2026-10-06: M2 diagnosis provider and read-only boundary
+
+The user chose an LLM now, using OpenRouter, and requested a local `.env` file.
+Use `OPENROUTER_API_KEY` and configurable `OPENROUTER_MODEL`, defaulting to
+`openai/gpt-4.1-mini`. Its listed price is $0.40/million input and
+$1.60/million output tokens; see the
+[model page](https://openrouter.ai/openai/gpt-4.1-mini). Request strict
+JSON-schema output and route only to compatible providers, following
+[OpenRouter's structured-output documentation](https://openrouter.ai/docs/guides/features/structured-outputs).
+Use one bounded HTTP request per diagnosis; retain model ID and token usage.
+This is a provider choice within M2, not a change to MVP scope.
+
+Live checks of the initially considered Gemini 2.5 Flash Lite repeatedly
+misdiagnosed the healthy rollout; the deterministic evidence validator rejected
+those claims. Choose GPT-4.1 mini for the default based on this task-specific
+evidence. Use a neutral prompt that first determines whether a current failure
+exists, and include only active owned ReplicaSets in deployment observations.
+
+Use the official MCP Python SDK's supported v1 line, pinned in `uv.lock`, and
+local stdio servers. Keep `mcp/` as executable scripts without `__init__.py` so
+the repository does not shadow the installed SDK's `mcp` package. LangGraph has
+only `COLLECT → HYPOTHESIZE → END`. The model receives collected evidence, never
+the incident library's ground truth, and has no tools or repair actions.
+
+Read through a dedicated namespace Role and ServiceAccount, with an expiring
+token in `.local/diagnosis-kubeconfig`. A separate manual setup script provisions
+RBAC and credentials from the checkout's admin kubeconfig. Diagnosis cannot
+provision or refresh its own credentials and cannot use admin fallback.
+Project environment values and Kubernetes Secret data are excluded from tool
+projections. Continue using bounded Kubernetes container logs as the simple
+backend chosen in M0; add no log storage or metrics MCP until required.
+
+Use pod-owner and deployment-owned ReplicaSet UIDs to correlate current failures,
+then require the deployment image, failed container state, and Warning event to
+agree before accepting the model's bad-image diagnosis. Reject invented citations,
+historical failures, and healthy conclusions during stalled rollouts. Retain the
+candidate diagnosis beside the validated result so rejected claims are visible.
+Filter events to current API resource UIDs and send structured evidence once,
+avoiding duplicated observation text in the model prompt. This keeps rollout
+history from being mistaken for an active failure and reduces token cost.
+
+The user explicitly approved sending the bounded local demo state, events, and
+API logs to OpenRouter for live validation. Keep `.env` and reports untracked;
+commit only `.env.example`. Repair proposals, approval gates, and execution stay
+in M3.

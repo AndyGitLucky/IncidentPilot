@@ -7,7 +7,8 @@ implementation history and current handoff notes.
 
 The demo supplies a healthy **frontend → API → PostgreSQL** application and a
 Prometheus scrape. M1 adds a reproducible bad-image incident with manual injection
-and deterministic restoration. The agent begins in M2.
+and deterministic restoration. M2 adds read-only MCP evidence collection and a
+LangGraph diagnosis using an OpenRouter LLM.
 
 ## Fresh checkout setup
 
@@ -105,6 +106,78 @@ Ground truth and expected observations are in
 Historical Warning events can remain after recovery; current pod state and
 rollout completion determine whether the incident is still active.
 
+## M2: read-only LLM diagnosis
+
+After the demo setup, install the agent and provision its read-only credentials:
+
+```powershell
+uv sync --frozen --extra agent
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-diagnosis.ps1
+```
+
+Copy `.env.example` to `.env` if `.env` does not exist. Paste your OpenRouter key
+into `OPENROUTER_API_KEY`. The agent loads this file directly; VS Code terminal
+environment injection is optional. Existing process environment variables take
+precedence. `.env` is ignored by Git and excluded from Docker builds.
+
+The default is `openai/gpt-4.1-mini`: a low-cost model with structured outputs,
+listed at $0.40/million input tokens and $1.60/million output tokens on 2026-10-06.
+See [OpenRouter's model page](https://openrouter.ai/openai/gpt-4.1-mini).
+Change `OPENROUTER_MODEL` in `.env` to use another model supporting JSON-schema
+responses. Provider routing requires support for all requested parameters.
+
+Inspect the exact evidence locally, without making an LLM request:
+
+```powershell
+uv run --frozen --extra agent python -m agent --collect-only --output .local/evidence.json
+```
+
+Run diagnosis in either a healthy or injected state:
+
+```powershell
+uv run --frozen --extra agent python -m agent --output .local/diagnosis.json
+```
+
+Diagnosis sends the demo pod/deployment state, current API resource events,
+and bounded API container logs to OpenRouter. Environment values, Kubernetes
+Secrets, kubeconfig credentials, and API keys are excluded from the evidence.
+Each run makes one model request with a 2,048-token output limit and no automatic
+retries. Collection alone uses no API credits.
+
+The JSON report contains `COLLECT → HYPOTHESIZE`, timestamped evidence with IDs,
+the model's candidate diagnosis, the validated diagnosis, model ID, and token
+usage. Each citation resolves to an evidence entry in the same report. An active
+bad-image diagnosis requires the current deployment image, an owned pod waiting
+with `ErrImageNeverPull`, and a matching Warning event for that pod UID and image.
+Historical pod events are excluded; old ReplicaSets alone do not prove failure.
+The failed container's logs explicitly say `not_started`; the previous healthy
+replica's logs remain separate. Missing evidence, unsupported model claims,
+provider errors, and incomplete model output produce `inconclusive` and exit 2.
+A supported diagnosis or healthy result exits 0.
+
+Two local stdio MCP servers expose only `get_pods`, `describe_pod`, `get_events`,
+`get_deployment`, and `search_logs`. Pod/ReplicaSet reads cap at 100 resources;
+events paginate up to 500. Incomplete reads fail explicitly. Logs cap at 10 pods,
+100 lines and 8 KB per container, from the last 10 minutes during diagnosis.
+The agent uses `.local/diagnosis-kubeconfig` and explicit `kind-incidentpilot`
+context, never the admin kubeconfig or ambient `KUBECONFIG`. Its Kubernetes
+ServiceAccount can read only demo pods, logs, events, deployments, and ReplicaSets.
+It cannot patch workloads, read Secrets, execute commands, or delete volumes.
+The token expires after one hour; rerun `setup-diagnosis.ps1` to refresh it.
+There is no repair tool or execution stage in M2.
+
+For the live acceptance sequence, which calls OpenRouter three times and uses
+the manual M1 scripts to inject and restore the fixture:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-diagnosis.ps1
+```
+
+It checks healthy → bad image → healthy diagnoses, evidence citations, read-only
+permissions, and unchanged resource identities/specifications during each
+diagnosis. Restoration runs in `finally` after attempted injection. Reports go
+to `.local/m2/healthy.json`, `injected.json`, and `restored.json`.
+
 ## Inspect and reset
 
 The checkout's kubeconfig is isolated in `.local/kubeconfig`. In a new terminal:
@@ -147,8 +220,8 @@ Signing in to Docker does not enable firmware virtualization.
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```powershell
-uv sync --frozen
-uv run --frozen pytest
+uv sync --frozen --extra agent
+uv run --frozen --extra agent pytest
 ```
 
 uv supplies Python 3.12 and installs the exact versions in `uv.lock`. The Docker
@@ -159,6 +232,9 @@ changing dependencies, update both:
 uv lock
 uv export --frozen --no-dev --no-emit-project --format requirements-txt --output-file app/api/requirements.txt
 ```
+
+Agent dependencies are an optional extra; the demo API image keeps its small
+runtime dependency set. Without the extra, agent test modules are skipped.
 
 Kustomize renders the SQL seed from `app/db/init.sql` (outside `cluster/base`):
 
@@ -172,7 +248,9 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   and reproducible setup verified.
 - **M1 complete:** bad-image injection, pod/event evidence, fixed-image restore,
   and three live inject/restore cycles verified.
-- Next: M2, read-only diagnosis of the bad-image incident with cited evidence.
+- **M2 complete:** read-only Kubernetes/logs MCP, LangGraph evidence collection,
+  and a live OpenRouter diagnosis with validated citations.
+- Next: M3, human-approved repair for the existing bad-image incident.
 
 ## Validation record
 
@@ -216,3 +294,27 @@ Windows/amd64; Linux/macOS and ARM hosts have not been tested.
   reported write warnings; all tests completed successfully.
 
 The cluster was left healthy with `deployment/api` using `incidentpilot-api:m0`.
+
+2026-10-06 M2 acceptance on the same Windows/amd64 kind cluster:
+
+- `uv run --frozen --extra agent pytest`: **40 passed**, with the existing
+  upstream Starlette/AnyIO deprecation warning.
+- Official MCP protocol tests confirm exactly four Kubernetes read tools and
+  one bounded logs tool, structured results, and rejection of unknown tools.
+- Both M2 PowerShell scripts parse under Windows PowerShell 5.1.
+- The reader can inspect pods, logs, events, and deployments; RBAC denies
+  deployment patching, pod exec, Secret reads, and PVC deletion.
+- Live `verify-diagnosis.ps1` passed with `openai/gpt-4.1-mini`: healthy
+  `no_active_incident` (6,813 tokens), injected `bad_image` (7,987 tokens), and
+  restored `no_active_incident` (6,869 tokens). The injected diagnosis cited
+  `e1` deployment, `e3` matching events, and `e5` failed-pod description, plus
+  the pod snapshot `e2`.
+- Resource identities, generations, and specifications did not change during
+  any diagnosis. Manual M1 restoration and HTTP/database/Prometheus checks
+  succeeded; the demo was left healthy.
+- The agent's dependencies remain outside the demo API image. The root-only
+  hash export `app/api/requirements.txt` is unchanged.
+
+The initially considered Gemini 2.5 Flash Lite produced unsupported healthy-state
+claims; evidence validation rejected them. GPT-4.1 mini passed the acceptance
+sequence. This is a single live M2 acceptance sequence, not the M5 benchmark.
