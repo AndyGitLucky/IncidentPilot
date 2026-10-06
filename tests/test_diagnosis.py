@@ -97,6 +97,7 @@ def run_graph(tools, output=None, http_status=200):
         assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
         assert request.headers["HTTP-Referer"] == "http://localhost:8080"
         assert request.headers["X-OpenRouter-Title"] == "IncidentPilot"
+        assert request.headers["X-Title"] == "IncidentPilot"
         assert "X-OpenRouter-App-Visibility" not in request.headers
         payload = json.loads(request.content)
         assert payload["response_format"]["type"] == "json_schema"

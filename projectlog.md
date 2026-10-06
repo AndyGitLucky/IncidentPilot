@@ -417,3 +417,24 @@ ignored `.local/openrouter-hidden-only.json`. No incident evidence or cluster
 action was involved. Leave the isolated variant in place for the user's activity
 display-name confirmation. Public-page visibility for the already-created hidden
 localhost entry is not reset by this test. M5 live benchmark remains pending.
+
+## 2026-10-06 — Hidden-only name failure; isolated X-Title test
+
+The user supplied the hidden-only request's activity screenshot: it still shows
+`http://localhost:8080/` as the name, while the preceding combined-fix request
+shows IncidentPilot. Removing hidden alone did not fix the observed name.
+
+For the next controlled test, retained `HTTP-Referer: http://localhost:8080` and
+`X-OpenRouter-Title: IncidentPilot`, kept hidden absent, and added only the
+documented compatible `X-Title: IncidentPilot`. No app URL/configuration or
+benchmark changes were reintroduced. Updated the existing header check and
+current README/decision record.
+
+All **25 diagnosis tests pass**; diff checks pass. Captured the actual client's
+headers locally and sent one synthetic `Reply exactly OK.` request with exactly
+this attribution variant. At 16:48:09 Europe/Berlin it returned HTTP 200 and OK,
+with 11 prompt/2 completion tokens and cost $0.0000076. Generation:
+`gen-1791298089-6AZJTwEqdfQyucA8dmI3`; credential-free result is ignored in
+`.local/openrouter-title-only.json`. The activity display-name result awaits
+the user's confirmation; HTTP success is not treated as proof of attribution.
+No incident evidence or cluster action was involved.

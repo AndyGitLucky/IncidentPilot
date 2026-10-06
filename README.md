@@ -132,11 +132,12 @@ Change `OPENROUTER_MODEL` in `.env` to use another model supporting JSON-schema
 responses. Provider routing requires support for all requested parameters.
 
 Requests identify the app as **IncidentPilot** in OpenRouter using
-`HTTP-Referer: http://localhost:8080` and `X-OpenRouter-Title: IncidentPilot`.
-The user requested an isolated test: restore the original URL/title headers and
-remove only `X-OpenRouter-App-Visibility: hidden`. The app-specific URL, extra
-`X-Title`, and URL configuration from the preceding fix have been reverted.
-Display-name confirmation for this variant is pending. OpenRouter documents
+`HTTP-Referer: http://localhost:8080`, `X-OpenRouter-Title: IncidentPilot`, and
+the compatible `X-Title: IncidentPilot`. The user confirmed that removing only
+`X-OpenRouter-App-Visibility: hidden` still displayed the localhost URL as the
+name. The next isolated test keeps that URL and adds only `X-Title`; display-name
+confirmation for this variant is pending. The app-specific URL/configuration
+remain reverted. OpenRouter documents
 that removing the header cannot change the visibility of an already-created
 hidden app, so its public page alone is not a definitive test of the title;
 see [OpenRouter's attribution guide](https://openrouter.ai/docs/app-attribution).

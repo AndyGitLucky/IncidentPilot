@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-10-06: Test the compatible title header separately
+
+The user's screenshot confirms the hidden-only test still displays
+`http://localhost:8080/`, while the preceding combined fix displays IncidentPilot.
+Removing hidden alone therefore did not correct the observed activity name.
+Continue the controlled investigation by retaining localhost and the modern
+title header, keeping hidden absent, and adding only `X-Title: IncidentPilot`.
+OpenRouter documents this spelling as supported for compatibility. Send one
+synthetic OK-only test through the same provider and leave the variant for
+display-name confirmation. Do not infer a result from a successful HTTP response
+or retry the unrelated incident-evidence benchmark.
+
 ## 2026-10-06: Isolate the visibility-header change
 
 The user explicitly requested reverting the attribution fix except for removal

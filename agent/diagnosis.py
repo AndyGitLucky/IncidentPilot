@@ -106,6 +106,7 @@ class OpenRouterDiagnoser:
                         "Authorization": f"Bearer {self.api_key}",
                         "HTTP-Referer": "http://localhost:8080",
                         "X-OpenRouter-Title": "IncidentPilot",
+                        "X-Title": "IncidentPilot",
                     },
                     json=payload,
                 )
