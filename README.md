@@ -15,6 +15,124 @@ fixtures, runbooks, evidence checks, and a per-case evaluation artifact.
 M5 adds repeated benchmarks, three diagnosis comparison modes, metrics tables,
 OpenTelemetry traces, and one local Grafana dashboard.
 
+## Architecture
+
+The agent runs as a local Python CLI (`python -m agent`); a human invocation or
+benchmark episode starts collection. The demo application and observability
+services run in one local kind cluster. OpenRouter is the external diagnosis
+provider, with `openai/gpt-4.1-mini` as the configurable default.
+
+```mermaid
+flowchart TB
+    user["Human operator"]
+    model["OpenRouter LLM<br/>Structured diagnosis + evidence IDs"]
+
+    subgraph host["Local host: Python agent"]
+        workflow["LangGraph<br/>COLLECT → HYPOTHESIZE<br/>Validate citations; TEST → PROPOSE_FIX in repair mode"]
+        gate{"WAIT_FOR_APPROVAL<br/>LangGraph interrupt + in-memory checkpoint"}
+        runner["EXECUTE: RestrictedRepairRunner<br/>Five fixed actions<br/>.local/repair-kubeconfig"]
+        verify["VERIFY: runner recovery checks<br/>Exact rollout + owned ready endpoints<br/>Frontend + database-backed HTTP"]
+        report["JSON report<br/>Evidence, diagnosis, proposal, outcome"]
+        subgraph readers["Local stdio MCP subprocesses: read-only credentials"]
+            k8smcp["Kubernetes MCP<br/>Pods, deployments, events, Service routing"]
+            logsmcp["Logs MCP<br/>Bounded Kubernetes container logs"]
+        end
+    end
+
+    subgraph cluster["Local kind cluster"]
+        kube["Kubernetes API"]
+        subgraph workloads["incidentpilot namespace"]
+            frontend["nginx frontend<br/>localhost:8080"]
+            api["FastAPI demo app<br/>Deployment/api + Service/api"]
+            db["PostgreSQL + PVC"]
+            frontend -->|HTTP proxy| api
+            api -->|SQL| db
+        end
+    end
+
+    user -->|CLI invocation| workflow
+    workflow <-->|stdio tools + evidence| k8smcp
+    workflow <-->|stdio tools + evidence| logsmcp
+    k8smcp -->|Read via diagnosis-reader| kube
+    logsmcp -->|Read pod logs via diagnosis-reader| kube
+    workflow -->|Bounded evidence over HTTPS| model
+    model -->|Candidate diagnosis| workflow
+    workflow -->|Supported fixed repair proposal| gate
+    workflow -->|Diagnosis only, healthy, or inconclusive| report
+    user -->|Type approve proposal-id| gate
+    gate -->|Exact valid approval| runner
+    gate -->|Denied or expired| report
+    runner -->|Validated atomic patch: API Deployment or Service only| kube
+    runner -->|Execution identity| verify
+    runner -->|Execution failed| report
+    verify -->|Read rollout + routing with repair credentials| kube
+    verify -->|HTTP health checks| frontend
+    verify -->|Recovered or failed| report
+
+    classDef readonly fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e
+    classDef approval fill:#fef3c7,stroke:#b45309,color:#78350f
+    classDef repair fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    class k8smcp,logsmcp readonly
+    class gate approval
+    class runner repair
+```
+
+The two MCP servers use `.local/diagnosis-kubeconfig` and expose four Kubernetes
+read tools plus `search_logs`. Their evidence projections exclude credentials
+and Secret contents. Deterministic validation checks citations, current resource
+ownership, and fixture symptoms before the agent can propose a fixed repair.
+The default CLI ends after diagnosis; `--repair` adds the approval/execution path.
+
+The runner is a separate credential and code boundary within the local process.
+It rechecks the proposal hash, five-minute expiry, live target identity and
+configuration before applying an atomic patch. RBAC permits patches only to
+`Deployment/api` and `Service/api`; runner code limits the contents to the five
+fixed actions. Each fresh proposal needs its own approval. Checkpoints last for
+the process lifetime, and execution failures are reported without automatic retry.
+
+Benchmark observability follows a separate local path:
+
+```mermaid
+flowchart LR
+    bench["Local benchmark harness<br/>Instrumented graph + MCP calls"]
+    files["Ignored .local/m5 output<br/>Reports, results, metrics.prom, traces.jsonl"]
+
+    subgraph cluster["Same local kind cluster"]
+        subgraph demo["incidentpilot namespace"]
+            metrics["Demo API /metrics"]
+            prom["Prometheus"]
+        end
+        subgraph obs["incidentpilot-observability namespace"]
+            push["Pushgateway"]
+            tempo["Tempo"]
+            grafana["Grafana<br/>One dashboard"]
+        end
+    end
+
+    bench -->|Always save local artifacts| files
+    bench -->|Push metrics via loopback port-forward| push
+    bench -->|OTLP HTTP via loopback port-forward| tempo
+    prom -->|Scrape benchmark metrics| push
+    prom -->|Scrape application counter| metrics
+    grafana -->|Query metrics| prom
+    grafana -->|Query traces| tempo
+```
+
+`scripts/benchmark.ps1 -Observability` enables the Pushgateway and Tempo exports;
+local artifacts are saved on every benchmark. Prometheus supplies health and
+dashboard signals; diagnosis evidence comes from Kubernetes state, events, and
+logs. The harness uses identical captured evidence for raw/structured/runbook
+comparisons, with keyword retrieval over five local runbooks in runbook mode.
+Comparison proposals are denied. `-HumanRepair` collects fresh evidence for a
+separately approved structured repair. Fixture injection and manual cleanup use
+the harness's admin credentials and are measured separately from agent repairs.
+
+Implementation: [graph and approval gate](agent/graph.py),
+[MCP client](agent/mcp_client.py), [evidence reader](agent/kubernetes.py),
+[diagnosis validation](agent/diagnosis.py), [restricted runner](agent/repair.py),
+[reader RBAC](cluster/diagnosis-reader.yaml), [runner RBAC](cluster/repair-runner.yaml),
+[benchmark](eval/benchmark.py), and [telemetry](telemetry/runtime.py).
+
 ## Fresh checkout setup
 
 Prerequisites:
@@ -534,9 +652,9 @@ and the final trace. Final smoke checks passed and all seven deployments were
 ready. Raw reports and traces remain ignored under `.local/m5/20261006-154813`.
 The earlier diagnosis-only and provider-free artifacts remain unchanged.
 
-Diagnosis and repair metrics are now published. The remaining portfolio checks
-are the implementation architecture diagram, a timed human-approved demo, and
-verification of the current clean-checkout instructions. Every future repair
+Diagnosis and repair metrics and the [implementation architecture](#architecture)
+are now published. The remaining portfolio checks are a timed human-approved demo
+and verification of the current clean-checkout instructions. Every future repair
 still requires a fresh exact approval; manual cleanup never counts as agent
 repair success.
 

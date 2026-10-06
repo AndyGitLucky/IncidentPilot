@@ -622,3 +622,35 @@ fresh-evidence reliability idea to Parking Lot without implementing it.
   of current clean-checkout instructions.
 - Preserve the blocked crashloop opportunity and all metric denominators. Keep
   the five fixed incidents and existing safety boundary; add no unrelated systems.
+
+## 2026-10-06 — Portfolio: implementation architecture diagrams
+
+Added two Mermaid diagrams to README: the local incident workflow and benchmark
+observability. Checked the diagrams against the CLI, LangGraph graph, MCP client
+and two stdio servers, evidence validation, runner, RBAC, benchmark harness,
+telemetry exporters, and cluster manifests. The diagrams show bounded evidence
+sent to OpenRouter, exact human approval with an in-memory checkpoint, separately
+credentialed fixed patches, recovery verification and failure/report branches.
+The observability diagram shows local artifacts, loopback exports to Pushgateway
+and Tempo, Prometheus scrapes, and Grafana's two data sources and single dashboard.
+
+Documented the default diagnosis-only path, optional repair path, five-minute
+proposal expiry, runbook comparison, and the separation between manual fixture
+cleanup and approved agent repairs. Replaced the specification's initial schematic
+with a link to the implemented architecture, checked its Definition of Done item,
+and advanced the immediate next action. No runtime or MVP scope change.
+
+Validation: both Mermaid blocks pass the installed Mermaid flowchart parser;
+all nine new implementation links resolve; source/RBAC/export connections and
+the task diff were reviewed; `git diff --check` passes. A read-only live check
+confirms all four demo and three observability deployments remain 1/1 ready.
+This documentation-only task did not run the benchmark or execute repairs.
+
+### Current handoff
+
+- **M0–M5 complete; architecture diagrams published in README.** Diagnosis and
+  approved repair metrics retain their existing artifacts and denominators.
+- Next unfinished portfolio criterion: a timed human-approved demo under five
+  minutes, followed by verification of the current clean-checkout instructions.
+- Keep the five fixed incidents, separate reader/runner credentials, and exact
+  fresh approval for every repair.

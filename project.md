@@ -191,35 +191,20 @@ Some may become stretch goals later.
 
 # 6. Architecture
 
-```text
-                      ┌───────────────┐
-Alert / User ────────►│ LangGraph     │
-                      │ Incident Agent │
-                      └───────┬───────┘
-                              │
-                 ┌────────────┼────────────┐
-                 ▼            ▼            ▼
-          Kubernetes MCP  Metrics MCP   Logs MCP
-                 │            │            │
-                 └──────┬─────┴─────┬──────┘
-                        ▼           ▼
-                    Evidence Collector
-                           │
-                           ▼
-                    Root Cause Hypothesis
-                           │
-                           ▼
-                     Repair Proposal
-                           │
-                           ▼
-                     HUMAN APPROVAL
-                           │
-                           ▼
-                 Restricted Action Runner
-                           │
-                           ▼
-                       Verification
-```
+The implementation diagrams are in [README — Architecture](README.md#architecture).
+The local Python CLI runs LangGraph with two read-only stdio MCP servers for
+Kubernetes state/events and bounded container logs. OpenRouter returns a candidate
+diagnosis; deterministic evidence validation precedes the fixed repair proposal.
+
+Repair mode pauses at a LangGraph interrupt for approval of the exact fresh
+proposal. A separately credentialed allowlisted runner validates and patches only
+Deployment/api or Service/api, then verifies rollout, owned ready endpoints and
+database-backed HTTP recovery. Reports retain denied, blocked and failed outcomes.
+
+The benchmark writes local artifacts and optionally exports metrics through
+Pushgateway to Prometheus and OpenTelemetry traces to Tempo. One local Grafana
+dashboard queries Prometheus and Tempo. These observability signals are separate
+from the current MCP diagnosis evidence path.
 
 ---
 
@@ -757,7 +742,7 @@ Portfolio-ready means:
 - [x] diagnosis/repair metrics published (9/9 approved recoveries; 9/10 opportunities)
 - [x] traces visible
 - [x] dashboard works
-- [ ] architecture diagram exists
+- [x] architecture diagram exists (implementation and observability in README)
 - [ ] demo completes in <5 minutes
 - [ ] clean checkout instructions work
 
@@ -799,14 +784,13 @@ all five classes have verified approved recovery. The repeated repair benchmark
 records nine approved recoveries and one blocked fresh proposal out of ten
 opportunities. The cluster is healthy, with metrics and traces verified.
 
-Next unfinished portfolio criterion: add an implementation-accurate architecture
-diagram to README. Show the actual local MCP evidence readers, OpenRouter
-diagnosis, LangGraph approval gate, separate allowlisted repair runner, recovery
-verification, and local observability stack. Then finish the remaining checks:
+The implementation-accurate architecture and observability diagrams are published
+in [README](README.md#architecture). Next unfinished portfolio criterion: time a
+human-approved demo and confirm it completes in under five minutes, then verify
+the current clean-checkout instructions:
 
 ```text
-implementation-accurate architecture diagram
-→ timed human-approved demo under five minutes
+timed human-approved demo under five minutes
 → verify current clean-checkout instructions
 ```
 
