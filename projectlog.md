@@ -95,3 +95,11 @@ node is Ready and all four deployments are healthy. No runtime changes.
   `incidents/bad_image/expected_evidence.yaml`.
 - No AI, MCP, agent repair runner, additional incident type, or infrastructure
   was added.
+
+## 2026-10-06 — Commit workflow preference
+
+Recorded the user's standing instruction in the `project.md` session bootstrap
+and new-session prompt: automatically commit each successful task after relevant
+checks and diff review, unless the user requests uncommitted changes. Commit only
+task-related changes and report the commit hash and validation results.
+Documentation-only change; verified the diff with `git diff --check`.

@@ -21,6 +21,15 @@ Before coding:
 7. Put useful future ideas in **Parking Lot**.
 8. Do not convert this into a generic DevOps dashboard or autonomous self-healing platform.
 
+### Task completion
+
+At the end of each successful task, run the relevant checks, review the diff,
+update the project documentation as needed, and automatically create a local Git
+commit with a descriptive message. Include only changes belonging to that task;
+preserve unrelated user changes. Report the commit hash and validation results
+in the final response. This is standing user authorization to commit without
+asking again, unless the user explicitly requests that changes stay uncommitted.
+
 ### Immutable project statement
 
 IncidentPilot diagnoses a small, fixed set of Kubernetes incidents using metrics, events and logs, proposes an evidence-backed repair, executes only approved low-risk actions, and measures diagnosis and recovery performance.
@@ -704,6 +713,9 @@ Portfolio-ready means:
 # 21. New-Session Prompt
 
 > Read `project.md` and `DECISIONS.md` before changing code. Treat the five-incident MVP, safety boundary, non-goals, state machine and milestone acceptance criteria as authoritative. Inspect the current repository and cluster state, determine the next unfinished acceptance criterion, and implement only that. Do not add incident types or infrastructure from the Parking Lot. If a change to the plan is necessary, propose a `DECISIONS.md` entry first.
+
+> Finish each successful task with relevant validation and a local Git commit
+> under the Task completion rule above, unless the user requests otherwise.
 
 ---
 
