@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10-06: Correct OpenRouter app identity
+
+The user showed a working named app at `https://local.bewerbung/` and our
+localhost attribution displaying its URL as its name, with a 404 app page.
+The public-page failure matches our `X-OpenRouter-App-Visibility: hidden` header;
+OpenRouter documents that this suppresses public pages and that subsequent
+headers cannot change an existing app's visibility. The missing display title
+is not proven to have the same cause. Use a distinct, app-specific identifier,
+`https://local.incidentpilot/`, request the public entry expected by the user,
+and send both documented title spellings for compatibility. Allow the URL to be
+configured through `OPENROUTER_APP_URL`, preserved by all benchmark modes.
+
+This changes provider attribution metadata only; it does not deploy a domain or
+send additional incident evidence. Validate outbound headers offline and use one
+tiny synthetic OK-only provider request to inspect its generation attribution.
+The rejected Kubernetes-evidence export and pending M5 live comparison remain
+separate and are not retried by this fix. No MVP scope change.
+
 ## 2026-10-06: M5 benchmark and observability
 
 Implement the requested M5 across the existing five fixtures. Repeat each case

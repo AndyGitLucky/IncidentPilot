@@ -12,6 +12,7 @@ from agent.models import Diagnosis, Evidence, ModelResult
 from agent.fixtures import BAD_SELECTOR, GOOD_SELECTOR, fixture_matches
 
 DEFAULT_MODEL = "openai/gpt-4.1-mini"
+DEFAULT_APP_URL = "https://local.incidentpilot/"
 SYSTEM_PROMPT = """Investigate availability of the demo API through Service/api AND deployment/api.
 An API Service routing outage IS an active incident even when every pod is healthy.
 Do not assume an incident was injected. Return only the requested diagnosis JSON.
@@ -73,10 +74,11 @@ class DiagnosisError(RuntimeError):
 
 
 class OpenRouterDiagnoser:
-    def __init__(self, api_key: str, model: str = DEFAULT_MODEL, transport=None):
+    def __init__(self, api_key: str, model: str = DEFAULT_MODEL, transport=None, *, app_url=DEFAULT_APP_URL):
         self.api_key = api_key
         self.model = model
         self.transport = transport
+        self.app_url = app_url
 
     @classmethod
     def from_env(cls):
@@ -84,7 +86,16 @@ class OpenRouterDiagnoser:
         key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         if not key:
             raise DiagnosisError("Paste your OpenRouter key into OPENROUTER_API_KEY in .env")
-        return cls(key, os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL)
+        return cls(key, os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
+                   app_url=os.environ.get("OPENROUTER_APP_URL", DEFAULT_APP_URL).strip() or DEFAULT_APP_URL)
+
+    def request_headers(self):
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "HTTP-Referer": self.app_url,
+            "X-OpenRouter-Title": "IncidentPilot",
+            "X-Title": "IncidentPilot",
+        }
 
     async def diagnose(self, evidence: list[Evidence]) -> ModelResult:
         payload = {
@@ -102,12 +113,7 @@ class OpenRouterDiagnoser:
             async with httpx.AsyncClient(timeout=45, transport=self.transport) as http:
                 response = await http.post(
                     "https://openrouter.ai/api/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "HTTP-Referer": "http://localhost:8080",
-                        "X-OpenRouter-Title": "IncidentPilot",
-                        "X-OpenRouter-App-Visibility": "hidden",
-                    },
+                    headers=self.request_headers(),
                     json=payload,
                 )
                 if response.status_code != 200:

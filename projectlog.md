@@ -370,3 +370,29 @@ attempted. Finish live A/B/C results only after explicit export approval; curren
 diagnosis accuracy/token/agent-repair metrics are deliberately unset. Optional
 approved-repair evaluation remains interactive. M5 implementation and local
 acceptance are complete; its live-model acceptance remains pending.
+
+## 2026-10-06 — OpenRouter attribution: named public app
+
+The user's comparison screenshots show a working named Bewerbung Pipeline app
+at `https://local.bewerbung/`, whereas IncidentPilot's generic localhost entry
+displays its URL and its public app page returns 404. Checked the official
+OpenRouter documentation: our `X-OpenRouter-App-Visibility: hidden` suppresses
+public app pages, and later headers cannot change an existing app's visibility.
+The missing display title's exact cause remains unproven; the prior explanation
+that valid headers alone settled the problem was incomplete.
+
+Replaced the generic identifier with `https://local.incidentpilot/`, removed the
+hidden visibility header, and sent both `X-OpenRouter-Title` and the supported
+legacy `X-Title` as IncidentPilot. Added optional `OPENROUTER_APP_URL`, shared
+header construction, and preservation of provider identity in all three
+benchmark modes. Updated `.env.example`, README, and decisions. The actual demo
+still uses localhost:8080; the named URL is provider attribution metadata.
+
+Validation: **232 tests pass**; outbound default headers, process/file config
+precedence, and benchmark identity preservation are covered. One synthetic
+`Reply exactly OK.` provider request succeeded. Its generation metadata was
+still unavailable after ten read-only polls; no further model request was made.
+A separate public-page check returned HTTP 200 with HTML title
+`IncidentPilot | OpenRouter`, confirming the named public entry. Diff checks pass.
+No incident evidence was exported and no cluster mutation was performed. The
+pending M5 live-model benchmark remains pending explicit export approval.
