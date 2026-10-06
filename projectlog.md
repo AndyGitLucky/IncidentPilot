@@ -438,3 +438,34 @@ with 11 prompt/2 completion tokens and cost $0.0000076. Generation:
 `.local/openrouter-title-only.json`. The activity display-name result awaits
 the user's confirmation; HTTP success is not treated as proof of attribution.
 No incident evidence or cluster action was involved.
+
+## 2026-10-06 — Final attribution: app-specific identity with hidden enabled
+
+The user confirmed the compatible X-Title/localhost test still displays the URL,
+and requested a final proper-name check with hidden enabled. Initially inferred
+a fresh private identifier; the first preflight incorrectly treated an HTTP 200
+response as an existing public app and stopped before any model request. The
+user clarified that the existing working named URL was intended. Restored
+`https://local.incidentpilot/` with hidden and sent the requested synthetic test
+at 16:57:50 Europe/Berlin, HTTP 200/OK, 11 prompt/2 completion tokens; generation
+`gen-1791298670-cuU269r9XicVRpR2iZdk` in ignored
+`.local/openrouter-final-hidden.json`.
+
+The user then explicitly chose the fresh private identifier approach. The
+candidate page's actual title was `Not Found | OpenRouter`, despite HTTP 200,
+and contained no IncidentPilot name. Configured
+`HTTP-Referer: https://local.incidentpilot-private/`, both IncidentPilot title
+headers, and `X-OpenRouter-App-Visibility: hidden` from its first model request.
+This preserves the previous public entry and requests a distinct hidden entry.
+
+Final synthetic test at 16:59:28 Europe/Berlin returned HTTP 200/OK with 11
+prompt/2 completion tokens and cost $0.0000076; generation
+`gen-1791298768-ziFeD42asqOqk1Gitx5H`. Public-page content remained
+`Not Found | OpenRouter`, consistent with hidden visibility. Credential-free
+result is ignored under `.local/openrouter-private-final.json`. The name in
+private account analytics awaits the user's confirmation; HTTP status/title
+checks are not substituted for that observation.
+
+All **229 tests pass**; captured outbound headers and diff checks pass. Updated
+README and decision record. No incident evidence or cluster mutation was involved;
+M5's live benchmark remains pending explicit evidence-export approval.

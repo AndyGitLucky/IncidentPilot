@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10-06: Final attribution preference: named and hidden
+
+The user confirmed the compatible-title-only localhost test also displays the
+URL rather than IncidentPilot. They requested hidden attribution and a final
+name test. After initially choosing the existing working identifier and testing
+it, they explicitly chose the fresh private identifier approach. Use
+`https://local.incidentpilot-private/` with both supported IncidentPilot title
+headers and `X-OpenRouter-App-Visibility: hidden` from its first model request.
+Leave the earlier public entry unchanged; this creates a distinct private entry
+rather than relying on a later header to alter existing stored visibility.
+
+Validate outbound headers and send one synthetic OK-only request using the
+actual client headers. No incident evidence or cluster action is included;
+M5 live benchmark approval stays pending. The user can confirm the activity name.
+The first preflight mistakenly treated HTTP 200 as proof of an existing app and
+stopped before a model call. The body actually has title `Not Found | OpenRouter`
+and no IncidentPilot name; public-page checks must inspect content as well as status.
+
 ## 2026-10-06: Test the compatible title header separately
 
 The user's screenshot confirms the hidden-only test still displays

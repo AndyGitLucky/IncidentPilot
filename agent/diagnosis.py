@@ -104,9 +104,10 @@ class OpenRouterDiagnoser:
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
-                        "HTTP-Referer": "http://localhost:8080",
+                        "HTTP-Referer": "https://local.incidentpilot-private/",
                         "X-OpenRouter-Title": "IncidentPilot",
                         "X-Title": "IncidentPilot",
+                        "X-OpenRouter-App-Visibility": "hidden",
                     },
                     json=payload,
                 )

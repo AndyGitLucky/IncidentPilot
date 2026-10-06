@@ -95,10 +95,10 @@ def model_response(content):
 def run_graph(tools, output=None, http_status=200):
     def respond(request):
         assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
-        assert request.headers["HTTP-Referer"] == "http://localhost:8080"
+        assert request.headers["HTTP-Referer"] == "https://local.incidentpilot-private/"
         assert request.headers["X-OpenRouter-Title"] == "IncidentPilot"
         assert request.headers["X-Title"] == "IncidentPilot"
-        assert "X-OpenRouter-App-Visibility" not in request.headers
+        assert request.headers["X-OpenRouter-App-Visibility"] == "hidden"
         payload = json.loads(request.content)
         assert payload["response_format"]["type"] == "json_schema"
         assert payload["response_format"]["json_schema"]["strict"] is True
