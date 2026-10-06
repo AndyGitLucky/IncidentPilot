@@ -13,6 +13,7 @@ Before coding:
 
 1. Read this entire `project.md`.
 2. Read `DECISIONS.md` if present.
+   Read `projectlog.md` if present for implementation history and handoff notes.
 3. Inspect the current cluster manifests, source code and tests.
 4. Identify the current milestone.
 5. Implement only the next unfinished acceptance criterion.

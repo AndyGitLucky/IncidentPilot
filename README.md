@@ -2,7 +2,8 @@
 
 A controlled Kubernetes incident-response project. The authoritative scope and
 milestones are in [project.md](project.md); implementation choices are in
-[DECISIONS.md](DECISIONS.md).
+[DECISIONS.md](DECISIONS.md). See [projectlog.md](projectlog.md) for the brief
+implementation history and current handoff notes.
 
 The M0 baseline supplies a healthy **frontend → API → PostgreSQL** application
 and a Prometheus scrape. Incident injection and the agent begin in later milestones.
