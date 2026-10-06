@@ -139,13 +139,13 @@ still runs at localhost:8080. The user confirmed both localhost experiments
 (remove hidden alone, then add X-Title) still displayed the URL as the app name.
 The user chose a fresh app-specific identifier with hidden enabled from its
 first request, so the existing public `https://local.incidentpilot/` entry is
-not reused. The display name sent to OpenRouter is IncidentPilot; the user can
-confirm its rendering in account analytics. The earlier public entry remains
+not reused. The user confirmed that the fresh private entry displays IncidentPilot
+in account analytics. The earlier public entry remains
 unchanged; OpenRouter requires support to change an existing entry's stored visibility.
 The user's latest screenshot confirms the existing `local.incidentpilot` entry
 still displays IncidentPilot after a request carrying hidden. Read-only generation
 metadata confirms the fresh private identifier has a separate app ID and the
-expected origin; its activity display name still awaits confirmation.
+expected origin. The final screenshot also confirms the private entry's proper name.
 See [OpenRouter's attribution guide](https://openrouter.ai/docs/app-attribution).
 
 Inspect the exact evidence locally, without making an LLM request:

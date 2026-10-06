@@ -492,3 +492,18 @@ activity display name still awaits observation. Safe metadata is ignored in
 Updated README/handoff with that distinction. Documentation-only change;
 metadata consistency and diff checks pass. Runtime configuration remains the
 named private identifier with hidden; the last full code validation is 229 tests.
+
+## 2026-10-06 — Named private attribution confirmed
+
+The user supplied the final activity screenshot showing IncidentPilot with the
+fresh `https://local.incidentpilot-pri...` tooltip, confirming the proper display
+name for the separate private entry whose app ID/origin were already verified.
+Keep `https://local.incidentpilot-private/`, both IncidentPilot title headers,
+and hidden enabled. Attribution investigation is complete: both removing hidden
+alone and adding the compatible title header on localhost failed, while the
+app-specific identifier works with hidden enabled from its first request.
+
+Updated README and handoff to replace the pending name check with the user's
+confirmation. No further provider request, cluster action, or runtime change.
+Documentation diff checks pass; the latest code validation remains 229 passing
+tests. M5's incident-evidence benchmark is still separately pending authorization.
