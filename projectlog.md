@@ -156,3 +156,14 @@ Documentation-only change; verified the diff with `git diff --check`.
 - Live reports: `.local/m2/healthy.json`, `injected.json`, `restored.json`.
 - Next: **M3 — human-approved repair**, still limited to the bad-image case.
   No repair proposal, approval gate, or agent action runner exists yet.
+
+## 2026-10-06 — OpenRouter app attribution
+
+Fixed requests appearing as an unknown app by adding the required
+`HTTP-Referer: http://localhost:8080` alongside the current
+`X-OpenRouter-Title: IncidentPilot` header. The previous title-only header could
+not establish attribution. Set new app visibility to hidden so attribution is
+available in account analytics without creating a public listing. Documented
+the behavior in README and checked the emitted HTTP headers through the existing
+mock transport tests. All 40 tests passed; no paid live request was needed.
+M3 remains the next milestone.

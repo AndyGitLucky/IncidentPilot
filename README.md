@@ -126,6 +126,12 @@ See [OpenRouter's model page](https://openrouter.ai/openai/gpt-4.1-mini).
 Change `OPENROUTER_MODEL` in `.env` to use another model supporting JSON-schema
 responses. Provider routing requires support for all requested parameters.
 
+Requests identify the app as **IncidentPilot** in OpenRouter using
+`HTTP-Referer: http://localhost:8080` and `X-OpenRouter-Title: IncidentPilot`.
+The title alone is insufficient for attribution. New app attribution is hidden
+from public listings while remaining visible in your account's analytics; see
+[OpenRouter's attribution guide](https://github.com/OpenRouterTeam/docs/blob/main/app-attribution.mdx).
+
 Inspect the exact evidence locally, without making an LLM request:
 
 ```powershell

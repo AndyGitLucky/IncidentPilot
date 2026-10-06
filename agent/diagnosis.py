@@ -75,7 +75,12 @@ class OpenRouterDiagnoser:
             async with httpx.AsyncClient(timeout=45, transport=self.transport) as http:
                 response = await http.post(
                     "https://openrouter.ai/api/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}", "X-Title": "IncidentPilot"},
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "HTTP-Referer": "http://localhost:8080",
+                        "X-OpenRouter-Title": "IncidentPilot",
+                        "X-OpenRouter-App-Visibility": "hidden",
+                    },
                     json=payload,
                 )
                 if response.status_code != 200:
