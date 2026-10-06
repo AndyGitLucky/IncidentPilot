@@ -396,3 +396,24 @@ A separate public-page check returned HTTP 200 with HTML title
 `IncidentPilot | OpenRouter`, confirming the named public entry. Diff checks pass.
 No incident evidence was exported and no cluster mutation was performed. The
 pending M5 live-model benchmark remains pending explicit export approval.
+
+## 2026-10-06 — Isolated attribution test: remove only hidden
+
+At the user's request, reversed the app-specific URL, extra `X-Title`, optional
+URL configuration, and benchmark identity plumbing. Compared the result against
+the pre-fix revision: the only client-code difference is removal of
+`X-OpenRouter-App-Visibility: hidden`. Headers are again
+`HTTP-Referer: http://localhost:8080` and `X-OpenRouter-Title: IncidentPilot`.
+Updated the existing outbound-header test, README, and decisions; kept previous
+experiment history intact.
+
+Validation: **229 tests pass** and diff checks pass. Captured headers from the
+actual client through a local mock transport, then used those exact headers for
+one explicitly requested synthetic `Reply exactly OK.` OpenRouter request.
+At 16:44:29 Europe/Berlin it returned HTTP 200 and `OK`, with 11 prompt tokens,
+2 completion tokens, and reported cost $0.0000076. Generation:
+`gen-1791297870-iwoGzFx7W1HMgVKqZQUN`. The credential-free result is saved in
+ignored `.local/openrouter-hidden-only.json`. No incident evidence or cluster
+action was involved. Leave the isolated variant in place for the user's activity
+display-name confirmation. Public-page visibility for the already-created hidden
+localhost entry is not reset by this test. M5 live benchmark remains pending.

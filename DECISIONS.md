@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-10-06: Isolate the visibility-header change
+
+The user explicitly requested reverting the attribution fix except for removal
+of `X-OpenRouter-App-Visibility: hidden`, then sending a test for manual
+confirmation. Restore `HTTP-Referer: http://localhost:8080` with only
+`X-OpenRouter-Title: IncidentPilot`. Remove the app-specific URL/configuration
+and extra legacy title header from code/examples. Send one synthetic OK-only
+request using headers captured from the actual client, with no incident evidence.
+Retain the experiment until the user confirms its display name. Existing app
+visibility is sticky according to OpenRouter; this experiment tests the current
+activity name, and cannot prove that a formerly hidden public page can be exposed
+by changing a later request. No benchmark or cluster action is authorized here.
+
 ## 2026-10-06: Correct OpenRouter app identity
 
 The user showed a working named app at `https://local.bewerbung/` and our

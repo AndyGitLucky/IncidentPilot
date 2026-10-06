@@ -132,19 +132,14 @@ Change `OPENROUTER_MODEL` in `.env` to use another model supporting JSON-schema
 responses. Provider routing requires support for all requested parameters.
 
 Requests identify the app as **IncidentPilot** in OpenRouter using
-`HTTP-Referer: https://local.incidentpilot/`, `X-OpenRouter-Title: IncidentPilot`,
-and the compatible `X-Title: IncidentPilot` header. Set `OPENROUTER_APP_URL` to
-override the identifier. This URL is attribution metadata; the demo still runs
-at `http://localhost:8080` and no DNS/HTTPS setup is needed. A public app entry
-is requested, matching the user's working Bewerbung Pipeline app. The previous
-generic localhost identifier sent `X-OpenRouter-App-Visibility: hidden`, which
-disables public app pages and cannot be reversed by changing later request
-headers. The distinct named identifier avoids reusing that hidden entry; see
-[OpenRouter's attribution guide](https://openrouter.ai/docs/app-attribution).
-Verified 2026-10-06 with one synthetic `Reply exactly OK.` request: the new
-[IncidentPilot app page](https://openrouter.ai/apps?url=https%3A%2F%2Flocal.incidentpilot%2F)
-returns HTTP 200 and title `IncidentPilot | OpenRouter`. Earlier requests keep
-their previous attribution; the new identifier applies to subsequent requests.
+`HTTP-Referer: http://localhost:8080` and `X-OpenRouter-Title: IncidentPilot`.
+The user requested an isolated test: restore the original URL/title headers and
+remove only `X-OpenRouter-App-Visibility: hidden`. The app-specific URL, extra
+`X-Title`, and URL configuration from the preceding fix have been reverted.
+Display-name confirmation for this variant is pending. OpenRouter documents
+that removing the header cannot change the visibility of an already-created
+hidden app, so its public page alone is not a definitive test of the title;
+see [OpenRouter's attribution guide](https://openrouter.ai/docs/app-attribution).
 
 Inspect the exact evidence locally, without making an LLM request:
 

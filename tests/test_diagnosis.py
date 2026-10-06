@@ -95,9 +95,8 @@ def model_response(content):
 def run_graph(tools, output=None, http_status=200):
     def respond(request):
         assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
-        assert request.headers["HTTP-Referer"] == "https://local.incidentpilot/"
+        assert request.headers["HTTP-Referer"] == "http://localhost:8080"
         assert request.headers["X-OpenRouter-Title"] == "IncidentPilot"
-        assert request.headers["X-Title"] == "IncidentPilot"
         assert "X-OpenRouter-App-Visibility" not in request.headers
         payload = json.loads(request.content)
         assert payload["response_format"]["type"] == "json_schema"
@@ -212,24 +211,12 @@ def test_env_file_is_used_without_overriding_process_configuration(monkeypatch, 
     from agent import diagnosis as module
 
     monkeypatch.setattr(module, "ROOT", tmp_path)
-    (tmp_path / ".env").write_text("OPENROUTER_API_KEY=file-key\nOPENROUTER_MODEL=file-model\nOPENROUTER_APP_URL=https://file.incidentpilot/\n")
+    (tmp_path / ".env").write_text("OPENROUTER_API_KEY=file-key\nOPENROUTER_MODEL=file-model\n")
     monkeypatch.setenv("OPENROUTER_API_KEY", "process-key")
     monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
-    monkeypatch.delenv("OPENROUTER_APP_URL", raising=False)
     configured = OpenRouterDiagnoser.from_env()
     assert configured.api_key == "process-key"
     assert configured.model == "file-model"
-    assert configured.app_url == "https://file.incidentpilot/"
-    monkeypatch.setenv("OPENROUTER_APP_URL", "https://process.incidentpilot/")
-    assert OpenRouterDiagnoser.from_env().app_url == "https://process.incidentpilot/"
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     with pytest.raises(RuntimeError, match="Paste your OpenRouter key"):
         OpenRouterDiagnoser.from_env()
-
-
-@pytest.mark.parametrize("mode", ["raw", "structured", "runbook"])
-def test_comparison_preserves_the_provider_app_identity(mode):
-    from eval.comparison import ComparisonDiagnoser
-    provider = OpenRouterDiagnoser("test-key", app_url="https://custom.incidentpilot/")
-    compared = ComparisonDiagnoser(provider, mode)
-    assert compared.request_headers() == provider.request_headers()

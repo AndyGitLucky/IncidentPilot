@@ -2,7 +2,7 @@
 
 import re
 
-from agent.diagnosis import DEFAULT_APP_URL, OpenRouterDiagnoser, SYSTEM_PROMPT
+from agent.diagnosis import OpenRouterDiagnoser, SYSTEM_PROMPT
 from agent.kubernetes import ROOT
 
 MODES = ("raw", "structured", "runbook")
@@ -38,8 +38,7 @@ def retrieve_runbooks(evidence, limit=2, directory=ROOT / "runbooks"):
 
 class ComparisonDiagnoser(OpenRouterDiagnoser):
     def __init__(self, provider, mode):
-        super().__init__(provider.api_key, provider.model, provider.transport,
-                         app_url=getattr(provider, "app_url", DEFAULT_APP_URL))
+        super().__init__(provider.api_key, provider.model, provider.transport)
         if mode not in MODES:
             raise ValueError("Unknown comparison mode")
         self.mode = mode
