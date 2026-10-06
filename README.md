@@ -11,7 +11,8 @@ and a Prometheus scrape. Incident injection and the agent begin in later milesto
 
 Prerequisites:
 
-- Docker Desktop running **Linux containers** (allow at least 4 GB RAM and 2 CPUs).
+- Docker Desktop running **Linux containers**, with Docker Engine 28+ / API 1.48+
+  (allow at least 4 GB RAM and 2 CPUs).
 - `kubectl` on PATH; Docker Desktop includes it. Use a client compatible with
   Kubernetes 1.35 (1.34–1.36).
 - Windows PowerShell 5.1 or PowerShell 7, and internet access for the first build.
@@ -27,7 +28,7 @@ On Linux/macOS with PowerShell 7, use `pwsh -NoProfile -File ./scripts/setup.ps1
 No host Python, Helm, registry account, or manually installed kind is needed.
 The script downloads kind v0.33.0 and verifies its published SHA-256 checksum,
 creates the pinned single-node `incidentpilot` cluster, builds and loads the
-images, applies manifests, waits for all deployments, and runs an HTTP smoke
+images using a single-platform archive, applies manifests, waits for all deployments, and runs an HTTP smoke
 check. It is safe to rerun: the existing cluster and PostgreSQL PVC are reused,
 and API/frontend pods restart to pick up rebuilt images.
 

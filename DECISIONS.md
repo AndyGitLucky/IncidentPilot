@@ -25,3 +25,14 @@ Desktop cannot start its Linux engine. Keep the kind plan and complete all
 available local checks. Commit the implementation baseline with this limitation
 recorded. M0 remains current until fresh-cluster setup and repeatability pass;
 do not begin M1 yet. Enabling BIOS virtualization requires a user-driven reboot.
+
+## 2026-10-06: Docker containerd image imports
+
+After enabling SVM, Docker's Linux engine and kind cluster start successfully.
+The first setup run fails importing multi-platform image indexes because Docker
+uses the containerd image store and downloaded only the host platform's content.
+Export a single-platform archive with `docker image save --platform` and import
+it with `kind load image-archive`, as documented in
+[kind's known issues](https://kind.sigs.k8s.io/docs/user/known-issues/#unable-to-kind-load-docker-images).
+This changes only image transport within M0. Require Docker Engine 28+ (API 1.48+)
+for platform-filtered exports; do not change Docker's host-wide image store.

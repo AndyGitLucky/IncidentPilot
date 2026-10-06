@@ -73,7 +73,15 @@ foreach ($service in @('api', 'frontend')) {
 foreach ($image in @('postgres:17.5-alpine', 'prom/prometheus:v3.3.0')) {
     Invoke-Native 'docker' @('pull', $image)
 }
-Invoke-Native $kindPath @('load', 'docker-image', '--name', $clusterName, 'incidentpilot-api:m0', 'incidentpilot-frontend:m0', 'postgres:17.5-alpine', 'prom/prometheus:v3.3.0')
+# Docker's containerd image store can export indexes with unavailable platforms.
+# Filter to the node platform before kind imports the archive (kind known issue).
+$archivePath = Join-Path $localDir 'demo-images.tar'
+try {
+    Invoke-Native 'docker' @('image', 'save', '--platform', "linux/$architecture", '--output', $archivePath, 'incidentpilot-api:m0', 'incidentpilot-frontend:m0', 'postgres:17.5-alpine', 'prom/prometheus:v3.3.0')
+    Invoke-Native $kindPath @('load', 'image-archive', '--name', $clusterName, $archivePath)
+} finally {
+    if (Test-Path -LiteralPath $archivePath) { Remove-Item -LiteralPath $archivePath -Force }
+}
 
 # The only out-of-base input is the tracked SQL seed in app/db.
 $manifests = & kubectl kustomize (Join-Path $repoRoot 'cluster/base') --load-restrictor LoadRestrictionsNone
