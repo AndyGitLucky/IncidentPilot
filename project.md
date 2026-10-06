@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0–M4 complete; M5 implemented and locally validated; live model benchmark awaits evidence-export approval
+> **Project status:** M0–M5 complete; live A/B/C diagnosis results published; approved repair benchmark and portfolio checks remain
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -689,18 +689,29 @@ Deliver:
 
 **Acceptance:** one script runs the benchmark and produces a result artifact.
 
-**Status:** Implemented, provider-free acceptance verified 2026-10-06.
+**Status:** Complete, live comparison verified 2026-10-06 with explicit user
+approval to send bounded demo evidence to OpenRouter. Two repetitions of all
+five incidents plus a healthy control produced 33 successful requests with
+`openai/gpt-4.1-mini`. Raw, structured, and runbook modes each achieved 10/10
+candidate and validated diagnoses, complete required citation coverage, and no
+unsupported claims. All 30 incident proposals were denied; healthy controls
+produced no proposal. All 11 episodes preserved unrelated resources and verified
+manual cleanup. Agent repair success, MTTR, and regression remain unmeasured.
+The benchmark saved metrics and 709 trace spans with zero telemetry export errors;
+Grafana's metrics and trace proxies returned the live run. All 229 tests pass.
+See `eval/results/m5-live-2026-10-06.json` and README results. This small sample
+does not establish statistical reliability or an accuracy benefit from runbooks.
+
+Earlier provider-free acceptance, verified 2026-10-06:
 `scripts/benchmark.ps1` repeats all five fixtures, supports raw/structured/runbook
 comparisons over identical captured evidence, and saves results, metrics table,
 Prometheus exposition, and OpenTelemetry traces. Two repetitions (10 incidents)
 plus a healthy control passed symptom, read-only, recovery, and unrelated-resource
 checks. Grafana's single dashboard and both Prometheus/Tempo data sources work;
 local OTLP traces and the ten-incident counter were verified. All 229 tests pass.
-See `eval/results/m5-2026-10-06.json` and README results. Automatic approval review
-rejected live OpenRouter export; live A/B/C scores require explicit permission to
-send bounded demo evidence to that destination. Fixture checks are not model
-accuracy, and manual cleanup is not approved agent repair success. Those metrics
-remain unset; M5's live-model acceptance is pending.
+See `eval/results/m5-2026-10-06.json`. That historical fixture-only artifact keeps
+its model metrics unset. The previous evidence-export approval blocker was
+resolved by the user's explicit authorization for the live run above.
 
 ---
 
@@ -728,8 +739,8 @@ Portfolio-ready means:
 - [x] repair requires approval
 - [x] repairs use allowlisted actions
 - [x] recovery is automatically verified
-- [x] benchmark is reproducible (provider-free repeated acceptance; live comparison pending)
-- [ ] diagnosis/repair metrics published
+- [x] benchmark is reproducible (provider-free and live A/B/C repeated acceptance)
+- [ ] diagnosis/repair metrics published (diagnosis published; approved repair benchmark pending)
 - [x] traces visible
 - [x] dashboard works
 - [ ] architecture diagram exists
@@ -767,16 +778,20 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M4 are complete. M5 implementation and provider-free repeated benchmark,
-OpenTelemetry traces, Grafana dashboard, and README results are verified.
-Finish the pending live comparison after explicit evidence-export approval:
+M0–M5 are complete. The explicitly authorized live A/B/C benchmark, diagnosis
+metrics, OpenTelemetry traces, Grafana dashboard, and README results are verified.
+The next unfinished measurement is approved live repair performance across the
+five fixtures. Use the existing interactive mode with fresh proposals:
 
 ```text
-permission to send bounded demo evidence to OpenRouter
-→ scripts/benchmark.ps1 -Repetitions 2 -Observability
-→ publish actual A/B/C diagnosis metrics and README results
+refresh reader and separate runner credentials
+→ scripts/benchmark.ps1 -Repetitions 2 -Observability -HumanRepair
+→ human reviews and approves each exact fresh proposal
+→ publish measured repair success, MTTR, and regression checks
 ```
 
-Keep the five fixed incidents and existing safety boundary. Every agent repair
-still requires human approval; read-only diagnosis credentials remain separate
-from the allowlisted repair runner. Add no incident types or unrelated systems.
+Keep the five fixed incidents and existing safety boundary. The live benchmark's
+export authorization does not approve any repair. Every agent repair still
+requires human approval; read-only diagnosis credentials remain separate from
+the allowlisted repair runner. After measurements, finish the remaining portfolio
+checks in Definition of Done. Add no incident types or unrelated systems.

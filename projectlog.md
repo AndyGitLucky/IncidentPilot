@@ -507,3 +507,57 @@ Updated README and handoff to replace the pending name check with the user's
 confirmation. No further provider request, cluster action, or runtime change.
 Documentation diff checks pass; the latest code validation remains 229 passing
 tests. M5's incident-evidence benchmark is still separately pending authorization.
+
+## 2026-10-06 — M5: authorized live A/B/C comparison complete
+
+Read the specification, decisions, and implementation history; confirmed that
+the next unfinished acceptance was the live M5 comparison and that private
+OpenRouter attribution was already resolved. All 229 tests passed; the demo
+smoke check, seven deployment readiness checks, and local observability endpoints
+passed. The user explicitly approved exporting bounded demo Kubernetes state,
+events, and API logs to OpenRouter for the 33-request benchmark.
+
+Refreshed the separate read-only credentials. The first restricted run received
+no provider responses, restored every fixture, preserved unrelated resources,
+and exported telemetry without errors; retain it under ignored
+`.local/m5/20261006-153707`. The authorized network-enabled retry of
+`scripts/benchmark.ps1 -Repetitions 2 -Observability` exited successfully with
+`openai/gpt-4.1-mini`, 10 incident episodes, and a shared healthy control.
+
+Each of raw, structured, and runbook modes achieved 10/10 candidate and supported
+diagnoses, 100% top-2 recall and required citation coverage, and zero unsupported
+claims. All three healthy-control responses produced no proposal. All 30 incident
+proposals were denied, with no execution stage or execution data; all 11 episodes
+preserved unrelated resources and passed verified manual restoration.
+
+Mean tokens per comparison including controls were 8,755.273 / 9,705.909 /
+10,082.000 for A/B/C, with complete usage coverage. P50/P95 comparison latencies
+were 2.531/3.797, 2.500/3.515, and 2.547/3.860 s. Mean symptom detection was
+3.683 s; mean manual cleanup was 8.373 s. P50/P95 full incident duration was
+20.437/24.953 s. This small sample shows equal accuracy; retrieval adds tokens
+without demonstrating accuracy improvement. Diagnosis times include mode-order
+waiting and do not establish a speed benefit.
+
+Independently validated all 33 report schemas, scores, denied/not-needed outcomes,
+and absence of execution; recomputed aggregate metrics. Checked all 709 local
+trace spans, 11 incident roots, and 33 comparison/diagnosis spans without errors.
+Grafana's 12-panel dashboard and both data-source proxies passed: Prometheus
+returned ten injected incidents and 33 correct diagnoses, and Tempo returned
+the final stored trace. A fresh HTTP/database/Prometheus smoke check and all seven
+deployment readiness checks passed. Zero telemetry export errors.
+
+Published the credential/evidence-free summary at
+`eval/results/m5-live-2026-10-06.json`, preserving the provider-free artifact.
+Raw reports, traces, metrics, and independent validation remain ignored under
+`.local/m5/20261006-153954`. Updated README, decisions, and milestone status.
+No application, dependency, provider attribution, or incident-type changes.
+
+### Current handoff
+
+- **M0–M5 complete.** Live A/B/C diagnosis metrics are published; cluster healthy.
+- Next unfinished measurement: approved live repair success, MTTR, and immediate
+  regression across the five fixtures using existing interactive `-HumanRepair`.
+  Manual cleanup is not agent repair success; each fresh repair requires exact
+  human approval. The live export approval does not approve repairs.
+- Remaining portfolio checks stay in `project.md` Definition of Done. Keep the
+  five fixed incidents and existing safety boundary; add no unrelated systems.

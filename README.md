@@ -459,12 +459,45 @@ manifest rendering, dependency-lock checks, and `git diff --check` pass.
 Prometheus scraped `incident_total = 10`; both Grafana data-source proxies returned
 real metrics/stored Tempo traces. All demo and observability deployments are ready.
 
-Automatic approval review rejected the live A/B/C benchmark because it exports
-Kubernetes incident evidence to OpenRouter and this request did not explicitly
-authorize that payload/destination. No live model request was made in M5. Obtain
-explicit approval before running/publishing that comparison; do not interpret
-fixture checks or mock provider tests as model accuracy. Approved live repair
-metrics additionally require interactive `-HumanRepair` decisions.
+2026-10-06 live A/B/C results, after explicit user authorization to send bounded
+demo Kubernetes state, events, and API logs to OpenRouter:
+
+| Metric | A: raw | B: structured | C: runbook |
+|---|---:|---:|---:|
+| Correct candidate / validated incident diagnoses | 10/10 / 10/10 | 10/10 / 10/10 | 10/10 / 10/10 |
+| Top-2 recall / required evidence citation coverage | 100% / 100% | 100% / 100% | 100% / 100% |
+| Unsupported claims / incident attempts | 0/10 | 0/10 | 0/10 |
+| Healthy controls without unnecessary proposals | 1/1 | 1/1 | 1/1 |
+| No writes during comparison | 11/11 | 11/11 | 11/11 |
+| Mean tokens / comparison, including control | 8,755.273 | 9,705.909 | 10,082.000 |
+| P50 / P95 incident comparison latency | 2.531 / 3.797 s | 2.500 / 3.515 s | 2.547 / 3.860 s |
+| Mean time from symptom detection to diagnosis | 6.925 s | 5.569 s | 4.192 s |
+| Approved repair success / agent MTTR / regression | Not measured | Not measured | Not measured |
+
+The [live M5 result artifact](eval/results/m5-live-2026-10-06.json) records two
+repetitions of each fixed incident and one shared healthy episode, using
+`openai/gpt-4.1-mini`: 33 requests with complete token-usage coverage. All 30
+incident proposals were denied; all 11 episodes verified health and preserved
+unrelated resources after manual cleanup. Mean symptom detection was 3.683 s,
+mean manual cleanup was 8.373 s, and P50/P95 incident duration including all three
+comparisons and cleanup was 20.437/24.953 s. The run exported 709 trace spans
+without errors. Grafana's metrics proxy returned ten injected incidents and 33
+correct diagnoses; its Tempo proxy returned the final stored trace. A fresh
+smoke check passed and all seven demo/observability deployments were ready.
+
+All three modes reached the same accuracy on this small local sample; no
+accuracy improvement from retrieval was demonstrated. Runbooks consumed more
+tokens. Diagnosis time includes waiting for earlier modes: two repetitions
+rotate structured and runbook first, so these times do not establish a runbook
+speed advantage. Compare individual latency separately. M5 live acceptance is
+complete; raw reports and traces remain ignored under
+`.local/m5/20261006-153954`. The earlier restricted attempt received no model
+responses and remains separately saved under `.local/m5/20261006-153707`.
+
+Approved repair measurements remain the next unfinished step and require
+interactive `-HumanRepair` decisions for each fresh proposal. Evidence-export
+authorization does not approve a repair; manual cleanup never counts as agent
+repair success.
 
 ## Inspect and reset
 
@@ -543,10 +576,10 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   resources verified by the corrected acceptance script.
 - **M4 complete:** all five fixtures, evidence validation, fixed repair proposals,
   runbooks, and live diagnosis/denial/manual recovery evaluation passed.
-- **M5 implemented:** repeated benchmark, A/B/C comparison harness, metrics
-  table, local OpenTelemetry/Tempo traces, and one Grafana dashboard. Repeated
-  provider-free acceptance passes; live model comparison needs evidence-export
-  approval. See the M5 validation record and `scripts/benchmark.ps1`.
+- **M5 complete:** provider-free and explicitly authorized live repeated
+  benchmarks, published A/B/C diagnosis metrics, OpenTelemetry/Tempo traces,
+  and one Grafana dashboard verified. Approved repair benchmark metrics remain
+  unmeasured. See the M5 result artifacts and `scripts/benchmark.ps1`.
 
 ## Validation record
 

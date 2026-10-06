@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-10-06: M5 live evidence export authorized and comparison complete
+
+The user explicitly approved sending bounded local demo Kubernetes state,
+events, and API logs to OpenRouter for the M5 live benchmark: 33 configured-model
+requests across two repetitions of five fixtures and shared healthy controls.
+This resolves the earlier export-approval blocker; attribution stays the
+confirmed private IncidentPilot entry. Agent repair proposals remain denied.
+
+The restricted execution attempt received no model responses and restored all
+fixtures. The subsequently authorized network-enabled run passed all 33 model
+comparisons, local telemetry exports, recovery, and resource-preservation checks.
+Publish its non-sensitive summary separately from the earlier fixture-only
+artifact. Retain raw evidence and both execution attempts under ignored `.local`.
+All modes achieved 10/10 supported diagnoses; report equal sample accuracy and
+the extra runbook tokens without claiming statistical or latency superiority.
+Order-dependent diagnosis timing includes comparison waiting.
+
+M5 acceptance is complete. Approved-agent repair success, MTTR, and regression
+remain unset because recovery was manual. Their next evaluation must use the
+existing interactive mode and exact fresh human approvals; export authorization
+does not authorize repairs. No architecture or MVP scope change.
+
 ## 2026-10-06: Final attribution preference: named and hidden
 
 The user confirmed the compatible-title-only localhost test also displays the
