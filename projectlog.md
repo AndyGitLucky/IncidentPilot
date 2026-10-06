@@ -167,3 +167,45 @@ available in account analytics without creating a public listing. Documented
 the behavior in README and checked the emitted HTTP headers through the existing
 mock transport tests. All 40 tests passed; no paid live request was needed.
 M3 remains the next milestone.
+
+## 2026-10-06 — M3: human-approved repair implementation
+
+1. Read project scope, decisions, history, manifests, code, and tests; confirmed
+   the existing kind demo was healthy and limited work to `bad_image`.
+2. Preserved the M2 read-only command. Added `--repair` and LangGraph
+   `TEST → PROPOSE_FIX → WAIT_FOR_APPROVAL → EXECUTE → VERIFY → REPORT`.
+   The gate uses an in-memory checkpoint and requires the exact approval phrase
+   for a concrete proposal. EOF/denial cannot reach the runner; saved JSON cannot
+   resume execution. Proposals bind citations, fixed parameters, UID/generation,
+   and a five-minute expiry. See the M3 decision record.
+3. Added separate repair RBAC and manual one-hour token provisioning. MCP retains
+   its read-only credentials. The runner can only restore the known baseline API
+   image, checks current fixture/UID/generation, and atomically tests UID/resource
+   version/image before its image-only patch. No automatic write retry exists.
+4. Added recovery verification of the exact completed rollout, owned ready
+   baseline pod, frontend, database health, and seeded database-backed response.
+   Execution/verification failures are reported without additional repair.
+5. Added a live acceptance script: deny a cited proposal and compare snapshots,
+   request human approval of a fresh proposal, verify recovery and unchanged
+   unrelated resources, and run the full HTTP/Prometheus smoke check. Manual M1
+   cleanup runs even on failure.
+6. All 73 tests pass with the existing upstream Starlette/AnyIO warning. All
+   PowerShell scripts parse; CLI help and diff whitespace checks pass.
+7. Live RBAC checks and healthy-state verification with separate repair credentials
+   pass. The full acceptance attempt reached fixture injection, but OpenRouter
+   was unreachable. Cleanup restored the cluster and passed the smoke checks.
+8. Automatic approval review rejected a network-enabled retry, requiring explicit
+   current-session authorization for exporting bounded demo evidence to
+   OpenRouter. Requested that authorization; no workaround or repair approval was
+   used. Full live acceptance is pending that authorization and the subsequent
+   concrete human approval.
+
+### Current handoff
+
+- **M0–M2 complete; M3 implemented, full live acceptance pending.**
+- The cluster is healthy on `incidentpilot-api:m0`.
+- Repair command: `uv run --frozen --extra agent python -m agent --repair`.
+- Refresh both one-hour credentials with `setup-diagnosis.ps1` and
+  `setup-repair.ps1`, then run `verify-repair.ps1` for full acceptance.
+- No new incident types, dependencies, database, UI, or infrastructure beyond
+  the required repair Role/ServiceAccount were introduced. M4 has not started.

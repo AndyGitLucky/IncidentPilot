@@ -1,4 +1,4 @@
-"""Structured, cited evidence and diagnosis; M2 deliberately has no action model."""
+"""Structured evidence, diagnosis, and the fixed M3 repair contract."""
 
 from datetime import datetime
 from typing import Literal
@@ -51,3 +51,34 @@ class DiagnosisReport(BaseModel):
     model_diagnosis: Diagnosis | None
     model: str
     usage: dict[str, int]
+
+
+class RepairParameters(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    namespace: Literal["incidentpilot"] = "incidentpilot"
+    deployment: Literal["api"] = "api"
+    container: Literal["api"] = "api"
+    image: Literal["incidentpilot-api:m0"] = "incidentpilot-api:m0"
+
+
+class RepairProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str
+    action: Literal["rollback_image_tag"] = "rollback_image_tag"
+    parameters: RepairParameters = Field(default_factory=RepairParameters)
+    deployment_uid: str
+    generation: int
+    expected_image: Literal["incidentpilot-api:m1-does-not-exist"] = "incidentpilot-api:m1-does-not-exist"
+    expires_at: datetime
+    expected_effect: str = "Restore the known-good API image and complete the stalled rollout."
+    risk: Literal["low"] = "low"
+    evidence_ids: list[str]
+
+
+class RepairReport(DiagnosisReport):
+    proposal: RepairProposal | None = None
+    approval: Literal["not_requested", "pending", "approved", "denied"] = "not_requested"
+    outcome: Literal["not_needed", "blocked", "pending", "denied", "failed", "recovered"] = "blocked"
+    execution: dict = Field(default_factory=dict)
+    verification: dict = Field(default_factory=dict)
+    error: str | None = None

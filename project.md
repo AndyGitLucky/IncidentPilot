@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0, M1, and M2 complete and verified locally; next milestone is M3
+> **Project status:** M0–M2 complete; M3 implemented, full live acceptance pending
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -642,6 +642,15 @@ Deliver:
 
 **Acceptance:** agent proposes correct repair; nothing is changed before approval; cluster returns healthy after approval.
 
+**Status:** Implemented 2026-10-06 for `bad_image` only. Added deterministic cited
+proposals, a LangGraph human approval interrupt, separate narrowly scoped repair
+credentials, atomic known-image restoration, and rollout/database-backed HTTP
+verification. All 73 tests pass; live RBAC and healthy-state verification pass.
+Full live acceptance is pending authorization to send demo evidence to OpenRouter
+and approval of the resulting repair proposal. The initial provider connection
+failed; manual test cleanup restored the healthy cluster. See README and
+`scripts/verify-repair.ps1`. Do not begin M4 until M3 live acceptance passes.
+
 ---
 
 ## M4 — Five Incident Types
@@ -687,9 +696,9 @@ Portfolio-ready means:
 - [ ] five incidents reproducible
 - [x] read-only evidence collection works
 - [x] structured diagnosis works
-- [ ] repair requires approval
-- [ ] repairs use allowlisted actions
-- [ ] recovery is automatically verified
+- [x] repair requires approval
+- [x] repairs use allowlisted actions
+- [x] recovery is automatically verified
 - [ ] benchmark is reproducible
 - [ ] diagnosis/repair metrics published
 - [ ] traces visible
@@ -729,7 +738,7 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M2 are complete. Implement M3 for the existing bad-image incident only:
+M0–M2 are complete. Finish live M3 acceptance for the existing bad-image incident:
 
 ```text
 cited diagnosis
@@ -739,6 +748,7 @@ cited diagnosis
 → rollout and application health verification
 ```
 
-No cluster changes before approval. Keep the read-only diagnosis credentials
-separate from the future allowlisted repair runner. Do not add incident types
-until M3 acceptance passes.
+Run `scripts/verify-repair.ps1` after provisioning both reader and repair tokens.
+No agent writes before approval. Keep read-only diagnosis credentials separate
+from the allowlisted repair runner. Do not add incident types until M3 acceptance
+passes.

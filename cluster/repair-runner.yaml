@@ -1,0 +1,38 @@
+# Separate from read-only MCP credentials. Only deployment/api can be patched.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: repair-runner
+  namespace: incidentpilot
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: repair-runner
+  namespace: incidentpilot
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [api]
+    verbs: [get, patch]
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: [list]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: repair-runner
+  namespace: incidentpilot
+subjects:
+  - kind: ServiceAccount
+    name: repair-runner
+    namespace: incidentpilot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: repair-runner

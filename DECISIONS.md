@@ -117,3 +117,30 @@ The user explicitly approved sending the bounded local demo state, events, and
 API logs to OpenRouter for live validation. Keep `.env` and reports untracked;
 commit only `.env.example`. Repair proposals, approval gates, and execution stay
 in M3.
+
+## 2026-10-06: M3 fixed repair and human approval
+
+Limit M3 to `bad_image`. Preserve the default M2 read-only command; opt into the
+repair workflow with `--repair`. After evidence validation (`TEST`), construct
+the proposal deterministically from the fixed fixture, with citations, deployment
+UID/generation, a five-minute expiry, and an ID covering all proposal fields.
+Use a LangGraph interrupt and an in-memory checkpoint. Only the exact typed
+`approve <proposal-id>` resumes execution. A stopped process requires a new
+diagnosis/proposal; saved reports cannot authorize repairs. No database is needed.
+
+Provision a separate short-lived `repair-runner` ServiceAccount manually. Its
+Role permits patching only `deployment/api`, plus the reads needed to verify
+recovery. MCP servers retain exclusively read-only credentials and tools. The
+runner offers only `rollback_image_tag`, restoring `incidentpilot-api:m0` from
+the fixed injected image. It validates approval and live UID/generation/fixture,
+then submits an image-only JSON Patch with atomic UID/resourceVersion/image tests.
+Concurrent edits and reused approvals fail; writes are never retried automatically.
+Kubernetes RBAC restricts the resource, while the runner restricts patch contents;
+the repair token is trusted local infrastructure and never sent to the model.
+
+Verification requires the same deployment's completed rollout, exactly one
+owned ready baseline pod, and successful frontend/database-backed HTTP checks.
+An old healthy replica cannot prove recovery. Record execution/verification
+failures without additional remediation. Live acceptance explicitly denies one
+proposal, compares resource snapshots, then requests human approval for a new
+proposal. The manual M1 restore remains test cleanup. No MVP scope change.

@@ -8,7 +8,8 @@ implementation history and current handoff notes.
 The demo supplies a healthy **frontend → API → PostgreSQL** application and a
 Prometheus scrape. M1 adds a reproducible bad-image incident with manual injection
 and deterministic restoration. M2 adds read-only MCP evidence collection and a
-LangGraph diagnosis using an OpenRouter LLM.
+LangGraph diagnosis using an OpenRouter LLM. M3 adds a fixed-image repair proposal,
+an explicit human approval gate, and automatic recovery verification.
 
 ## Fresh checkout setup
 
@@ -184,6 +185,60 @@ permissions, and unchanged resource identities/specifications during each
 diagnosis. Restoration runs in `finally` after attempted injection. Reports go
 to `.local/m2/healthy.json`, `injected.json`, and `restored.json`.
 
+## M3: human-approved bad-image repair
+
+Provision separate repair credentials after the M2 setup:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-repair.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\incidents\bad_image\inject.ps1
+uv run --frozen --extra agent python -m agent --repair --output .local/repair.json
+```
+
+The workflow runs `COLLECT → HYPOTHESIZE → TEST → PROPOSE_FIX`, prints the
+evidence-backed proposal, and pauses at `WAIT_FOR_APPROVAL`. Read its fixed action,
+parameters, citations, target UID/generation, and expiry. Type the exact
+`approve <proposal-id>` phrase shown to run `EXECUTE → VERIFY → REPORT`.
+Anything else, including EOF, denies execution. Each proposal expires after five
+minutes. The report is saved before the prompt and updated after the decision.
+The default command without `--repair` remains read-only.
+
+The only permitted action is `rollback_image_tag`: restore `deployment/api`'s
+`api` container from `incidentpilot-api:m1-does-not-exist` to
+`incidentpilot-api:m0`. Parameters are fixed by code rather than model output.
+The runner rechecks the live target and uses atomic JSON Patch preconditions;
+concurrent deployment edits, replacement targets, expired approval, and attempts
+to reuse approval reject execution. Start a new run to get a fresh proposal.
+An interrupted process cannot resume from a saved JSON report.
+
+MCP still uses `.local/diagnosis-kubeconfig`; only the approved runner opens
+`.local/repair-kubeconfig`. Neither uses admin credentials or ambient kubeconfig.
+The repair Role grants patch only on `deployment/api`, plus limited verification
+reads. It denies other deployments, Service edits, Secrets, exec, and deletion.
+RBAC restricts the target resource; the trusted runner enforces image-only
+patch contents. Refresh its one-hour token with `setup-repair.ps1`.
+
+Recovery requires exactly one updated/ready/available baseline API replica, an
+owned running baseline pod, and successful frontend, database health, and seeded
+database-message HTTP checks. The previous ready replica cannot establish rollout
+recovery. Reports include approval, execution, verification, and an explicit
+outcome. Failures exit 2 and do not trigger further repair. Healthy runs and denied
+proposals exit 0; denial records `denied`, never `recovered`.
+
+Run live acceptance (two OpenRouter calls, with human approval on the second):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-repair.ps1
+```
+
+The script checks both Roles, injects the existing fixture, denies one proposal,
+and compares workload/Service/volume identities and specifications to prove no
+write occurred. It then displays a fresh proposal for human approval and requires
+verified recovery. It also checks unrelated resources are unchanged and reruns
+the HTTP/Prometheus smoke check. Reports are `.local/m3/denied.json` and
+`approved.json`. Manual fixture cleanup runs in `finally` even if approval is
+denied or execution fails; this cleanup is separate from the agent workflow.
+
 ## Inspect and reset
 
 The checkout's kubeconfig is isolated in `.local/kubeconfig`. In a new terminal:
@@ -256,7 +311,9 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   and three live inject/restore cycles verified.
 - **M2 complete:** read-only Kubernetes/logs MCP, LangGraph evidence collection,
   and a live OpenRouter diagnosis with validated citations.
-- Next: M3, human-approved repair for the existing bad-image incident.
+- **M3 implemented:** cited fixed-image proposals, human approval, restricted
+  repair runner, and automatic verification. Full live acceptance remains pending.
+- Next: finish M3 live acceptance before adding M4 incident types.
 
 ## Validation record
 
@@ -324,3 +381,20 @@ The cluster was left healthy with `deployment/api` using `incidentpilot-api:m0`.
 The initially considered Gemini 2.5 Flash Lite produced unsupported healthy-state
 claims; evidence validation rejected them. GPT-4.1 mini passed the acceptance
 sequence. This is a single live M2 acceptance sequence, not the M5 benchmark.
+
+2026-10-06 M3 implementation checks:
+
+- `uv run --frozen --extra agent pytest`: **73 passed**, with the existing
+  upstream Starlette/AnyIO warning. Tests cover denial, mismatched/expired/altered
+  approval, stale deployments, atomic patch contents/conflicts, absence of writes
+  before approval, repeated resume, and rollout/database verification failures.
+- All PowerShell scripts parse under Windows PowerShell 5.1; `git diff --check`
+  passes. No new dependencies were added.
+- Live RBAC checks pass: the reader cannot patch API; the runner can patch API,
+  but cannot patch frontend or Services, read Secrets, exec, or delete PVCs.
+- The new verifier passes against the healthy live cluster with the separate
+  repair credentials, confirming rollout, frontend, and database-backed responses.
+- Full `verify-repair.ps1` acceptance remains pending. The first OpenRouter
+  connection failed; test cleanup restored rollout/HTTP/Prometheus health.
+  Automatic approval review rejected a network-enabled retry because it requires
+  explicit authorization to export bounded demo evidence to OpenRouter.

@@ -1,7 +1,7 @@
 [project]
 name = "incidentpilot"
 version = "0.0.1"
-description = "Controlled Kubernetes incident response with read-only diagnosis"
+description = "Controlled Kubernetes incident response with human-approved repair"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi==0.115.12",
