@@ -272,3 +272,32 @@ M3 remains the next milestone.
   configuration and the fixed healthy app image remain unchanged.
 - After interactive repair acceptance, M5 adds repeated benchmark comparisons,
   metrics, traces and the single Grafana dashboard. Add no incident types.
+
+## 2026-10-06 — M3: approved live recovery and snapshot-check fix
+
+The user ran live M3 acceptance. Denial passed without writes; proposal
+`f02bc67cb6213bdd` was human-approved and the restricted runner restored the
+API image, advancing generation 46 → 47. The report recorded `recovered`, completed
+rollout, one ready replica and successful frontend/database-backed HTTP checks.
+The final unrelated-resource assertion failed and manual cleanup left it healthy.
+
+Reproduced a Windows PowerShell 5.1 pipeline bug: `ConvertFrom-Json` emitted the
+whole resource array as one object, so the filters retained expected API target
+changes. Added `Get-UnrelatedDemoSignature`, which assigns the decoded array
+before resource enumeration. It preserves checks on every unrelated workload,
+Service (including API), pod and PVC. Added an actual-function AST regression
+covering 19 expected-recovery and unrelated-change scenarios. Future runs persist
+full before/after snapshots in ignored `.local/m3`.
+
+Validated both saved reports, proposal integrity/citations and the execution
+identity/generation; fresh read-only verification using the separate repair
+credentials and the full HTTP/Prometheus smoke check passed. Unrelated pod UIDs
+match pre-repair evidence. No new injection, provider request, approved repair,
+or reused approval was performed. The original full snapshots were not saved,
+so the historical full-spec comparison cannot be replayed.
+
+All 188 tests pass with the existing upstream Starlette/AnyIO warning; PowerShell
+parsing and diff checks pass. Recorded a non-sensitive M3 result that distinguishes
+successful live approved recovery from a clean corrected acceptance-script exit.
+The cluster is healthy. A fresh full-script run still needs its own human approval;
+the snapshot filter fix and regression validation are complete.

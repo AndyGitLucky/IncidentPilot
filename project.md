@@ -646,10 +646,15 @@ Deliver:
 proposals, a LangGraph human approval interrupt, separate narrowly scoped repair
 credentials, atomic known-image restoration, and rollout/database-backed HTTP
 verification. All 73 tests pass; live RBAC and healthy-state verification pass.
-Full interactive live acceptance still requires human approval of a concrete
-repair proposal. OpenRouter export was authorized for M4 and all five live
-diagnoses/proposals/denials passed. The user explicitly requested M4 despite
-the older sequencing restriction; see the dated decision. See README and
+The user completed live denial and approved repair on 2026-10-06: API generation
+46 → 47, with rollout/database-backed HTTP recovery confirmed. A Windows
+PowerShell JSON-array filtering bug falsely failed the final unrelated-resource
+assertion. The comparison is fixed and regression-tested; full snapshots are now
+saved for future checks. The original historical full-spec comparison cannot be
+replayed because those snapshots were not saved. A clean corrected-script live
+run remains pending; see `eval/results/m3-2026-10-06.json`. OpenRouter export was
+authorized for M4 and all five live diagnoses/proposals/denials passed. The user
+explicitly requested M4 despite the older sequencing restriction. See README and
 `scripts/verify-repair.ps1` for approved bad-image acceptance, or
 `scripts/verify-incidents.ps1 -HumanRepair` for all five approved repair paths.
 
@@ -752,7 +757,8 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M2 and M4 are complete. Finish interactive live approved-repair acceptance:
+M0–M2 and M4 are complete. M3's live approved repair and recovery are verified;
+rerun the corrected acceptance script for a clean unrelated-resource check:
 
 ```text
 cited diagnosis

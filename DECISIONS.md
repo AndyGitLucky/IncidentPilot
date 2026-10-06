@@ -187,3 +187,27 @@ The user explicitly authorized bounded demo evidence export to OpenRouter for
 this M4 evaluation. Raw evidence remains ignored under `.local`; commit only the
 non-sensitive result summary. Agent repair success stays unset in this run,
 because recovery used manual fixture restoration rather than approved execution.
+
+## 2026-10-06: M3 acceptance snapshot comparison regression
+
+The user's live run denied one proposal without writes, then approved proposal
+`f02bc67cb6213bdd`. The separate repair runner restored the known-good image,
+advanced the API generation from 46 to 47, and verified completed rollout and
+database-backed HTTP recovery. Its final unrelated-resource assertion failed.
+
+Reproduced the cause under Windows PowerShell 5.1: piping a JSON array directly
+from `ConvertFrom-Json` into `Where-Object` passes the entire array as one object.
+Member enumeration made the filters retain that array, including the expected
+API deployment and failed pod changes. Assign the decoded array first, then
+enumerate/filter the resources in a separate pipeline. Continue checking every
+non-API workload, Service (including Service/api), pod and PVC identity/spec.
+Extract the comparison into a function and test its actual AST body against
+expected API recovery and unrelated resource edits/replacements/removals/additions.
+
+Save full before/after snapshots under ignored `.local/m3` for future checks.
+The original run did not persist those snapshots, so its historical full-spec
+comparison cannot be replayed. Saved report validation and current read-only
+verification confirm the approved live repair and unchanged unrelated pod UIDs.
+Record that evidence separately from a clean exit of the corrected acceptance
+script, which still requires a new live run and a fresh human-approved proposal.
+Do not reuse the already consumed approval or auto-approve another repair.

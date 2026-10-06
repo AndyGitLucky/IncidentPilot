@@ -245,6 +245,8 @@ verified recovery. It also checks unrelated resources are unchanged and reruns
 the HTTP/Prometheus smoke check. Reports are `.local/m3/denied.json` and
 `approved.json`. Manual fixture cleanup runs in `finally` even if approval is
 denied or execution fails; this cleanup is separate from the agent workflow.
+The script also saves `before.json` and `after.json` resource snapshots so a
+failed unrelated-resource comparison can be inspected without replaying a repair.
 
 ## M4: five incident types
 
@@ -391,7 +393,8 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
 - **M2 complete:** read-only Kubernetes/logs MCP, LangGraph evidence collection,
   and a live OpenRouter diagnosis with validated citations.
 - **M3 implemented:** cited fixed-image proposals, human approval, restricted
-  repair runner, and automatic verification. Full live acceptance remains pending.
+  repair runner, and automatic verification. The user's live approved repair
+  recovered successfully; a corrected full-script acceptance rerun remains pending.
 - **M4 complete:** all five fixtures, evidence validation, fixed repair proposals,
   runbooks, and live diagnosis/denial/manual recovery evaluation passed.
 - Next: interactive approved-repair acceptance, followed by M5 benchmarks and
@@ -506,3 +509,22 @@ sequence. This is a single live M2 acceptance sequence, not the M5 benchmark.
   execution remains the explicit interactive `-HumanRepair` check; agent repair
   success is deliberately unset in the summary. All approved paths pass offline
   graph/runner tests. The cluster was left healthy.
+
+2026-10-06 M3 approved live repair and acceptance-check fix:
+
+- The user denied one cited proposal, then approved the fixed-image repair.
+  The agent restored API generation 46 → 47 and verified one ready baseline
+  replica, owned ready endpoints, frontend and database-backed HTTP recovery.
+  Saved report validation and a fresh read-only health check confirmed recovery.
+- The final Windows PowerShell unrelated-resource check incorrectly retained
+  the entire decoded JSON array, including the repaired API target. Assigned
+  the array before filtering and added a regression test using the actual
+  PowerShell function body. Its 19 scenarios accept API recovery and reject
+  unrelated Deployment/Service/pod/PVC edits, replacement, removal or addition.
+- Full before/after snapshots are now saved. The original run's full spec
+  comparison cannot be replayed; current unrelated pod UIDs match its evidence.
+  [M3 repair record](eval/results/m3-2026-10-06.json) distinguishes successful
+  approved recovery from the pending clean corrected-script acceptance run.
+- All 188 tests pass. The cluster remains healthy; the fix performs no repair
+  and does not reuse the consumed approval. To get a clean full-script result,
+  rerun `scripts/verify-repair.ps1` and approve its fresh proposal.

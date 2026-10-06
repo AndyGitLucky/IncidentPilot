@@ -1,0 +1,29 @@
+{
+  "milestone": "M3",
+  "live_repair_passed": true,
+  "original_acceptance_script_passed": false,
+  "corrected_acceptance_live_rerun_pending": true,
+  "approval": "approved",
+  "denied_proposal_no_execution": true,
+  "approved_proposal": "f02bc67cb6213bdd",
+  "action": "rollback_image_tag",
+  "generation_before": 46,
+  "generation_after": 47,
+  "verification": {
+    "healthy": true,
+    "rollout": "complete",
+    "ready_replicas": 1,
+    "frontend": "reachable",
+    "database": "reachable",
+    "message": "verified",
+    "verified_at": "2026-10-06T13:25:47.512056+00:00"
+  },
+  "current_health_verified": true,
+  "unrelated_pod_identities_unchanged": true,
+  "snapshot_regression_verified": true,
+  "limitations": [
+    "The original Windows PowerShell unrelated-resource check included the API target and falsely failed.",
+    "The original full before/after snapshots were not saved, so that historical full-spec comparison cannot be replayed.",
+    "The corrected comparison passes regression cases and now saves full snapshots for future acceptance runs."
+  ]
+}

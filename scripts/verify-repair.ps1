@@ -30,6 +30,17 @@ function Assert-Permission {
     }
 }
 
+function Get-UnrelatedDemoSignature {
+    param([string]$Snapshot)
+    # Windows PowerShell's ConvertFrom-Json emits a JSON array as one object.
+    # Assign it first so the next pipeline enumerates each resource before filtering.
+    $resources = $Snapshot | ConvertFrom-Json
+    $items = @($resources | Where-Object {
+        $_.kind -ne 'Pod' -or $_.spec.containers[0].name -ne 'api'
+    } | Where-Object { $_.kind -ne 'Deployment' -or $_.name -ne 'api' })
+    return (ConvertTo-Json -InputObject $items -Depth 40 -Compress)
+}
+
 Push-Location $repoRoot
 try {
     New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
@@ -48,6 +59,7 @@ try {
     try {
         & (Join-Path $repoRoot 'incidents/bad_image/inject.ps1')
         $before = Get-DemoSignature
+        [System.IO.File]::WriteAllText((Join-Path $artifactDir 'before.json'), $before, (New-Object System.Text.UTF8Encoding($false)))
         $deniedPath = Join-Path $artifactDir 'denied.json'
         'deny' | & uv run --frozen --extra agent python -m agent --repair --output $deniedPath | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Denied proposal failed; inspect $deniedPath." }
@@ -67,13 +79,9 @@ try {
             throw 'Human-approved recovery was not confirmed.'
         }
         # Preserve all non-API workloads, services, and volumes.
-        $oldResources = @($before | ConvertFrom-Json | Where-Object {
-            $_.kind -ne 'Pod' -or $_.spec.containers[0].name -ne 'api'
-        } | Where-Object { $_.kind -ne 'Deployment' -or $_.name -ne 'api' })
-        $afterResources = @((Get-DemoSignature) | ConvertFrom-Json | Where-Object {
-            $_.kind -ne 'Pod' -or $_.spec.containers[0].name -ne 'api'
-        } | Where-Object { $_.kind -ne 'Deployment' -or $_.name -ne 'api' })
-        if (($oldResources | ConvertTo-Json -Depth 40 -Compress) -ne ($afterResources | ConvertTo-Json -Depth 40 -Compress)) {
+        $after = Get-DemoSignature
+        [System.IO.File]::WriteAllText((Join-Path $artifactDir 'after.json'), $after, (New-Object System.Text.UTF8Encoding($false)))
+        if ((Get-UnrelatedDemoSignature $before) -ne (Get-UnrelatedDemoSignature $after)) {
             throw 'Unrelated workloads, services, or volumes changed.'
         }
         & (Join-Path $PSScriptRoot 'verify.ps1')
