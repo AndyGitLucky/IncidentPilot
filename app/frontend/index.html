@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IncidentPilot demo</title>
+  <style>
+    body { max-width: 42rem; margin: 10vh auto; padding: 1.5rem; font: 1rem/1.6 system-ui, sans-serif; color: #17233b; background: #f5f7fb; }
+    main { padding: 2rem; border: 1px solid #d9e1ed; border-radius: .75rem; background: white; }
+    h1 { margin-top: 0; }
+    button { padding: .6rem 1rem; cursor: pointer; }
+    #status { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>IncidentPilot demo</h1>
+    <p>A small application for reproducible Kubernetes incidents.</p>
+    <p id="status" role="status">Checking application health…</p>
+    <p id="message"></p>
+    <button id="refresh" type="button">Check again</button>
+  </main>
+  <script>
+    async function check() {
+      const button = document.getElementById('refresh');
+      button.disabled = true;
+      document.getElementById('message').textContent = '';
+      try {
+        const health = await fetch('/healthz', { cache: 'no-store' });
+        if (!health.ok) throw new Error('Health check failed');
+        const response = await fetch('/api/message', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Database request failed');
+        const data = await response.json();
+        document.getElementById('status').textContent = 'Healthy: frontend → API → PostgreSQL';
+        document.getElementById('message').textContent = data.message;
+      } catch (error) {
+        document.getElementById('status').textContent = 'Application unavailable';
+        document.getElementById('message').textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+    document.getElementById('refresh').addEventListener('click', check);
+    check();
+  </script>
+</body>
+</html>

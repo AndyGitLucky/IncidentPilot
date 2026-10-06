@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: incidentpilot-api:m0
+          imagePullPolicy: Never
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef: {name: postgres-demo, key: POSTGRES_DB}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: {name: postgres-demo, key: POSTGRES_USER}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: postgres-demo, key: POSTGRES_PASSWORD}
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests: {cpu: 100m, memory: 64Mi}
+            limits: {cpu: "1", memory: 128Mi}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: {path: /livez, port: http}
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 8000
+      targetPort: http

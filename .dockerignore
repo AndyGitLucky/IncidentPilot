@@ -1,0 +1,8 @@
+*
+!app/
+!app/api/
+!app/api/main.py
+!app/api/requirements.txt
+!app/frontend/
+!app/frontend/index.html
+!app/frontend/nginx.conf
