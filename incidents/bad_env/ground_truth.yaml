@@ -1,0 +1,27 @@
+incident_id: bad_env
+incident_type: broken environment variable / secret
+namespace: incidentpilot
+target:
+  kind: Deployment
+  name: api
+injection_script: incidents/bad_env/inject.ps1
+restore_script: incidents/bad_env/restore.ps1
+ground_truth_root_cause: >-
+  The non-secret DB_HOST variable references the nonexistent postgres-m4-missing Service, preventing database connectivity.
+observable_symptoms:
+  - "Current owned API pod is Running but not ready."
+  - "DB_HOST is postgres-m4-missing and that pod logs Database health check failed."
+approved_repair_action:
+  action: restore_known_env_value
+  parameters:
+    namespace: incidentpilot
+    deployment: api
+    container: api
+    env_name: DB_HOST
+    env_value: postgres
+  approval: Exact human approval of the current proposal is required for agent execution.
+verification_condition:
+  - API deployment uses the baseline image, startup command, DB_HOST and memory resources.
+  - Exactly one owned API pod is ready and the rollout has completed.
+  - Service/api selects app=api and has a ready endpoint for that owned pod.
+  - Frontend, database-backed HTTP and Prometheus smoke checks pass.

@@ -1,0 +1,25 @@
+incident_id: bad_selector
+incident_type: invalid Service selector
+namespace: incidentpilot
+target:
+  kind: Service
+  name: api
+injection_script: incidents/bad_selector/inject.ps1
+restore_script: incidents/bad_selector/restore.ps1
+ground_truth_root_cause: >-
+  Service/api selects app=api-m4-missing, which matches no healthy API pods and leaves no ready endpoints.
+observable_symptoms:
+  - "The API deployment and its owned pods remain healthy."
+  - "Service/api has the injected selector and no ready nonterminating endpoints; frontend API requests fail."
+approved_repair_action:
+  action: restore_known_service_selector
+  parameters:
+    namespace: incidentpilot
+    service: api
+    selector: app=api
+  approval: Exact human approval of the current proposal is required for agent execution.
+verification_condition:
+  - API deployment uses the baseline image, startup command, DB_HOST and memory resources.
+  - Exactly one owned API pod is ready and the rollout has completed.
+  - Service/api selects app=api and has a ready endpoint for that owned pod.
+  - Frontend, database-backed HTTP and Prometheus smoke checks pass.

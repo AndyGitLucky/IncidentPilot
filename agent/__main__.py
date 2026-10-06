@@ -46,8 +46,8 @@ async def run():
                     save(pending.model_dump_json(indent=2))
                     print(pending.model_dump_json(indent=2), flush=True)
                     proposal = pending.proposal
-                    print(f"\nHuman approval required: type approve {proposal.id} to restore deployment/api "
-                          f"to {proposal.parameters.image}. Expires {proposal.expires_at.isoformat()}.\n"
+                    print(f"\nHuman approval required: type approve {proposal.id} to execute {proposal.action}. "
+                          f"{proposal.expected_effect} Expires {proposal.expires_at.isoformat()}.\n"
                           "Anything else denies. Approval: ", end="", flush=True)
                     try:
                         answer = input().strip()

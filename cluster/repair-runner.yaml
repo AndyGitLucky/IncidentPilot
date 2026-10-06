@@ -1,4 +1,4 @@
-# Separate from read-only MCP credentials. Only deployment/api can be patched.
+# Separate from read-only MCP credentials. Only Deployment/api and Service/api can be patched.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -16,6 +16,13 @@ rules:
     resources: [deployments]
     resourceNames: [api]
     verbs: [get, patch]
+  - apiGroups: [""]
+    resources: [services]
+    resourceNames: [api]
+    verbs: [get, patch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [list]
   - apiGroups: [apps]
     resources: [replicasets]
     verbs: [list]

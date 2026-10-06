@@ -144,3 +144,46 @@ An old healthy replica cannot prove recovery. Record execution/verification
 failures without additional remediation. Live acceptance explicitly denies one
 proposal, compares resource snapshots, then requests human approval for a new
 proposal. The manual M1 restore remains test cleanup. No MVP scope change.
+
+## 2026-10-06: M4 requested before live M3 acceptance
+
+The user explicitly requested implementation of M4. Proceed with the remaining
+four fixed incidents despite the older M3 sequencing note; retain the human
+approval gate and report the pending interactive live M3 acceptance separately.
+Do not automatically approve live repairs during implementation or evaluation.
+
+Use PowerShell fixtures consistent with M1: a fixed failing startup command for
+`crashloop`, a 16Mi memory request/limit for `oom`, the non-secret `DB_HOST` value
+`postgres-m4-missing` for `bad_env`, and Service/api selector
+`app=api-m4-missing` for `bad_selector`. Only one fixture may be active at a time.
+The crashloop repair restores the image's default startup command and restarts
+the deployment by changing its pod template; memory repair restores the known
+64Mi request and 128Mi limit. Environment and selector repairs restore fixed
+known values. No arbitrary commands, environment values, or patches are accepted.
+
+Extend the existing deployment read with API Service and owned EndpointSlice
+evidence, rather than adding another MCP tool. Project termination state,
+resources, fixed startup profile, and only the two known non-secret DB_HOST
+values; continue excluding Secret contents and other environment values.
+Add narrowly scoped Service/api patch permission to the separate repair Role.
+Bind proposals to target UID/resourceVersion as well as deployment generation;
+apply atomic preconditions and reject concurrent edits and reused approvals.
+
+M4 evaluation covers all five fixtures, supported citations, proposal denial
+without writes, and manual restoration with health checks. An optional human
+repair mode evaluates approved live execution; offline tests exercise approval,
+patches and recovery for every action. Save per-case reports and an honest
+evaluation artifact. Repeated statistical benchmarks and telemetry remain M5.
+
+Live validation found two implementation issues: the kind API emits
+`endpoints:null` for an empty EndpointSlice, which the pinned SDK rejects during
+model deserialization; read that bounded response with the official client's
+raw-response option and project the empty list explicitly. Also replace the
+older deployment-only healthy prompt rule with a combined Service/rollout check.
+The initial model called ready pods healthy despite a broken selector; evidence
+validation rejected it. With the corrected prompt, all five live diagnoses,
+fixed proposals, denial/no-write checks and repeat inject/restore checks passed.
+The user explicitly authorized bounded demo evidence export to OpenRouter for
+this M4 evaluation. Raw evidence remains ignored under `.local`; commit only the
+non-sensitive result summary. Agent repair success stays unset in this run,
+because recovery used manual fixture restoration rather than approved execution.

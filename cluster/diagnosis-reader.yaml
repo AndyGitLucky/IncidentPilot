@@ -13,8 +13,11 @@ metadata:
   namespace: incidentpilot
 rules:
   - apiGroups: [""]
-    resources: [pods, events]
+    resources: [pods, events, services]
     verbs: [get, list]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [list]
   - apiGroups: [""]
     resources: [pods/log]
     verbs: [get]

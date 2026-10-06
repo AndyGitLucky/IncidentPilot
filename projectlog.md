@@ -209,3 +209,66 @@ M3 remains the next milestone.
   `setup-repair.ps1`, then run `verify-repair.ps1` for full acceptance.
 - No new incident types, dependencies, database, UI, or infrastructure beyond
   the required repair Role/ServiceAccount were introduced. M4 has not started.
+
+## 2026-10-06 — M4: five reproducible incident classes
+
+1. Read the specification, decisions, history, manifests, source and tests.
+   The user explicitly requested M4 despite the earlier pending interactive M3
+   acceptance. Recorded the sequencing override before implementation.
+2. Added fixed crashloop, OOM, bad-environment and bad-selector injection/restore
+   scripts, ground truth and evidence expectations. Central fixture constants
+   keep mutations deterministic and reject mixed or foreign configurations.
+   Preserved M1 commands and added guards against overlapping M4 incidents.
+3. Extended the existing four-tool Kubernetes MCP projection with classified
+   startup profiles, only known non-secret DB_HOST values, memory resources,
+   current/last termination states, and API Service/owned EndpointSlice evidence.
+   Logs can read the previous failed container. Secret contents/references,
+   other environment values and arbitrary commands remain excluded.
+4. Extended the diagnosis schema/prompt and deterministic citation validator to
+   all five classes. Require owned current pods and matching symptoms; reject
+   stale events, unrelated logs, mixed configurations and healthy claims during
+   Service outages. Added five short runbooks without adding retrieval machinery.
+5. Added the remaining four fixed repair actions, strict action-specific
+   parameters, human approval, UID/generation/resourceVersion checks, atomic
+   patches and recovery verification of rollout, owned ready endpoints and
+   database-backed HTTP. Extended only Service/api patch permission on the
+   separate runner Role; MCP credentials remain read-only.
+6. Added `scripts/verify-incidents.ps1` and the evaluation module. Default mode
+   evaluates live model diagnosis/proposal, denial without writes, repeatable
+   injection and manual restoration, unrelated resources and full smoke checks.
+   Local fixture-only and explicit interactive human-repair modes are available.
+   Saved reports cannot authorize execution; there is no automatic approval mode.
+7. The user authorized bounded demo evidence export to OpenRouter. Initial
+   sandboxed provider calls failed; the authorized network-enabled run succeeded.
+   The first live selector case exposed an SDK failure on `endpoints:null`;
+   implemented bounded raw-response projection and restored the Service manually.
+8. The model initially mistook healthy pods for a healthy service despite the
+   broken selector. Evidence validation rejected this and blocked proposals.
+   Updated the old deployment-only prompt rule to check routing first. The final
+   live evaluation passed all five diagnoses/proposals, denial/no-write checks,
+   repeated injection/restoration and all HTTP/database/Prometheus checks. A
+   separate final healthy model run produced no proposal or approval request.
+9. All 187 tests passed with the existing upstream Starlette/AnyIO warning.
+   Tests include every approved action, stale/tampered/expired approval, patch
+   conflicts, fixture separation, endpoint ownership, projection privacy and
+   verification failures. PowerShell parsing, CLI help, manifest and diff checks
+   passed. Live RBAC confirms only the two fixed targets are writable. The final
+   provider-free fixture/MCP evaluation also passed all five cases with model
+   accuracy correctly unset and the stricter unrelated-resource comparison.
+10. Updated README/project status and committed only the non-sensitive summary
+    at `eval/results/m4-2026-10-06.json`; raw evidence and credentials stay ignored.
+    The demo is healthy and unrelated pods/PVCs preserved. No dependencies,
+    incident types beyond the five, UI, infrastructure, or multi-agent system
+    were introduced.
+
+### Current handoff
+
+- **M4 complete:** all five incidents reproducible and evaluated with live LLM
+  diagnosis/proposals, denied execution and manual verified recovery.
+- **Interactive live approved repair remains pending** for M3/all-five execution;
+  the evaluation does not count manual restoration as agent repair success.
+- Commands: `scripts/verify-incidents.ps1`, `-FixturesOnly`, or `-HumanRepair`.
+- Refresh reader/runner tokens with the existing setup scripts. Model/provider
+  configuration and the fixed healthy app image remain unchanged.
+- After interactive repair acceptance, M5 adds repeated benchmark comparisons,
+  metrics, traces and the single Grafana dashboard. Add no incident types.

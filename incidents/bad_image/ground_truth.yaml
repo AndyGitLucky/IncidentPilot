@@ -27,7 +27,7 @@ approved_repair_action:
     container: api
     image: incidentpilot-api:m0
   implementation: Restore the fixed healthy image with kubectl set image, not rollout undo.
-  approval: Manually invoking restore.ps1 authorizes this M1 fixture restoration; no agent exists yet.
+  approval: Agent execution requires exact human approval of the current proposal; restore.ps1 is separate manual fixture cleanup.
 verification_condition:
   - Deployment template references incidentpilot-api:m0 and its generation is observed.
   - API rollout completes with exactly one updated, ready, available replica.

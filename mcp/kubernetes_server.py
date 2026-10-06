@@ -38,7 +38,7 @@ def get_events(namespace: str) -> dict[str, Any]:
 
 @server.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
 def get_deployment(namespace: str, name: str) -> dict[str, Any]:
-    """Read deployment rollout state and owned ReplicaSet identities; excludes secrets."""
+    """Read rollout, fixed non-secret configuration, and API Service/EndpointSlice routing."""
     return reader().get_deployment(namespace, name)
 
 

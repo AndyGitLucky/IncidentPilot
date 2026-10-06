@@ -1,0 +1,110 @@
+{
+  "milestone": "M4",
+  "mode": "live_model",
+  "human_repair": false,
+  "started_at": "2026-10-06T13:06:45.063063+00:00",
+  "cases": [
+    {
+      "incident_id": "bad_image",
+      "injected": true,
+      "repeat_injection": true,
+      "diagnosis_correct": true,
+      "proposal_correct": true,
+      "denial_no_write": true,
+      "agent_repair_success": null,
+      "restored": true,
+      "repeat_restore": true,
+      "unrelated_resources_unchanged": true,
+      "passed": true,
+      "tokens": {
+        "prompt_tokens": 9652,
+        "completion_tokens": 120,
+        "total_tokens": 9772
+      },
+      "duration_seconds": 16.265
+    },
+    {
+      "incident_id": "crashloop",
+      "injected": true,
+      "repeat_injection": true,
+      "diagnosis_correct": true,
+      "proposal_correct": true,
+      "denial_no_write": true,
+      "agent_repair_success": null,
+      "restored": true,
+      "repeat_restore": true,
+      "unrelated_resources_unchanged": true,
+      "passed": true,
+      "tokens": {
+        "prompt_tokens": 9978,
+        "completion_tokens": 141,
+        "total_tokens": 10119
+      },
+      "duration_seconds": 18.188
+    },
+    {
+      "incident_id": "oom",
+      "injected": true,
+      "repeat_injection": true,
+      "diagnosis_correct": true,
+      "proposal_correct": true,
+      "denial_no_write": true,
+      "agent_repair_success": null,
+      "restored": true,
+      "repeat_restore": true,
+      "unrelated_resources_unchanged": true,
+      "passed": true,
+      "tokens": {
+        "prompt_tokens": 9849,
+        "completion_tokens": 125,
+        "total_tokens": 9974
+      },
+      "duration_seconds": 18.406
+    },
+    {
+      "incident_id": "bad_env",
+      "injected": true,
+      "repeat_injection": true,
+      "diagnosis_correct": true,
+      "proposal_correct": true,
+      "denial_no_write": true,
+      "agent_repair_success": null,
+      "restored": true,
+      "repeat_restore": true,
+      "unrelated_resources_unchanged": true,
+      "passed": true,
+      "tokens": {
+        "prompt_tokens": 10170,
+        "completion_tokens": 100,
+        "total_tokens": 10270
+      },
+      "duration_seconds": 20.297
+    },
+    {
+      "incident_id": "bad_selector",
+      "injected": true,
+      "repeat_injection": true,
+      "diagnosis_correct": true,
+      "proposal_correct": true,
+      "denial_no_write": true,
+      "agent_repair_success": null,
+      "restored": true,
+      "repeat_restore": true,
+      "unrelated_resources_unchanged": true,
+      "passed": true,
+      "tokens": {
+        "prompt_tokens": 8403,
+        "completion_tokens": 108,
+        "total_tokens": 8511
+      },
+      "duration_seconds": 11.594
+    }
+  ],
+  "passed": true,
+  "limitations": [
+    "Single fixture pass; statistical benchmark and observability are M5.",
+    "Manual restoration is not counted as agent repair success."
+  ],
+  "completed_at": "2026-10-06T13:08:14.685362+00:00",
+  "diagnosis_accuracy": 1.0
+}

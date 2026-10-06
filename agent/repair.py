@@ -1,4 +1,4 @@
-"""A single fixed repair; approval never enables arbitrary patches or shell access."""
+"""Five fixed repairs; approval never enables arbitrary patches or shell access."""
 
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -10,10 +10,13 @@ from kubernetes import client, config
 
 from agent.diagnosis import validate_diagnosis
 from agent.kubernetes import CONTEXT, NAMESPACE, ROOT, TIMEOUT, KubernetesReader
-from agent.models import RepairProposal
-
-GOOD_IMAGE = "incidentpilot-api:m0"
-BAD_IMAGE = "incidentpilot-api:m1-does-not-exist"
+from agent.models import (
+    RepairProposal, RepairParameters, RestartParameters, MemoryParameters, EnvParameters, SelectorParameters,
+)
+from agent.fixtures import (
+    ACTIONS, BAD_HOST, BAD_IMAGE, BAD_SELECTOR, CRASH_COMMAND, GOOD_IMAGE, GOOD_MEMORY, BAD_MEMORY,
+    GOOD_SELECTOR, fixture_matches, container_configuration,
+)
 
 
 class RepairError(RuntimeError):
@@ -21,7 +24,7 @@ class RepairError(RuntimeError):
 
 
 def proposal_id(proposal):
-    payload = proposal.model_dump(mode="json", exclude={"id"})
+    payload = proposal.model_dump(mode="json", exclude={"id"}, warnings=False)
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -30,11 +33,27 @@ def propose_repair(report):
     if diagnosis.status != "diagnosed":
         return None
     deployment = next(e.data["deployment"] for e in report.evidence if "deployment" in e.data)
+    incident = diagnosis.incident_type
     if (deployment["name"] != "api" or deployment["desired_replicas"] != 1
-        or deployment["containers"] != [{"name": "api", "image": BAD_IMAGE, "image_pull_policy": "Never"}]):
+        or len(deployment["containers"]) != 1 or not fixture_matches(deployment["containers"][0], incident)):
         return None
+    data = next(e.data for e in report.evidence if "deployment" in e.data)
+    service = data.get("service", {})
+    if service.get("selector") != (BAD_SELECTOR if incident == "bad_selector" else GOOD_SELECTOR):
+        return None
+    types = {"bad_image": RepairParameters, "crashloop": RestartParameters, "oom": MemoryParameters,
+             "bad_env": EnvParameters, "bad_selector": SelectorParameters}
     proposal = RepairProposal(
         id="", deployment_uid=deployment["uid"], generation=deployment["generation"],
+        action=ACTIONS[incident], parameters=types[incident](),
+        expected_image=BAD_IMAGE if incident == "bad_image" else GOOD_IMAGE,
+        target_uid=service.get("uid") if incident == "bad_selector" else deployment["uid"],
+        resource_version=service.get("resource_version") if incident == "bad_selector" else None,
+        expected_effect={"bad_image": "Restore the known-good API image and complete the stalled rollout.",
+                         "crashloop": "Restore the image's default startup command and restart the API rollout.",
+                         "oom": "Restore the API memory request to 64Mi and limit to 128Mi.",
+                         "bad_env": "Restore the non-secret DB_HOST value to postgres.",
+                         "bad_selector": "Restore Service/api selector to app=api and recover ready endpoints."}[incident],
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
         evidence_ids=diagnosis.evidence_ids,
     )
@@ -67,23 +86,62 @@ class RestrictedRepairRunner:
         self.transport = transport
 
     def rollback_image_tag(self, proposal: RepairProposal, approval: str):
+        return self.execute(proposal, approval, expected_action="rollback_image_tag")
+
+    def restart_deployment(self, proposal, approval):
+        return self.execute(proposal, approval, expected_action="restart_deployment")
+
+    def increase_memory_limit_to_known_safe_value(self, proposal, approval):
+        return self.execute(proposal, approval, expected_action="increase_memory_limit_to_known_safe_value")
+
+    def restore_known_env_value(self, proposal, approval):
+        return self.execute(proposal, approval, expected_action="restore_known_env_value")
+
+    def restore_known_service_selector(self, proposal, approval):
+        return self.execute(proposal, approval, expected_action="restore_known_service_selector")
+
+    def execute(self, proposal, approval, *, expected_action):
         check_approval(proposal, approval)
+        if proposal.action != expected_action:
+            raise RepairError("Repair action does not match the selected allowlisted function.")
+        incident = next(k for k, v in ACTIONS.items() if v == proposal.action)
         try:
             deployment = self.apps.read_namespaced_deployment("api", NAMESPACE, _request_timeout=TIMEOUT)
             containers = deployment.spec.template.spec.containers
             if (deployment.metadata.uid != proposal.deployment_uid
                 or deployment.metadata.generation != proposal.generation
                 or deployment.spec.replicas != 1 or len(containers) != 1
-                or containers[0].name != "api" or containers[0].image != BAD_IMAGE
-                or containers[0].image_pull_policy != "Never"):
+                or not fixture_matches({"name": containers[0].name, "image": containers[0].image,
+                                        "image_pull_policy": containers[0].image_pull_policy,
+                                        **container_configuration(containers[0])}, incident)):
                 raise RepairError("Deployment changed since the proposal; collect a new diagnosis and approval.")
-            # Atomic preconditions close the read/patch race. Only the image may change.
+            routing = self.reader.get_api_routing()
+            if routing["service"]["selector"] != (BAD_SELECTOR if incident == "bad_selector" else GOOD_SELECTOR):
+                raise RepairError("Service changed since the proposal; collect a new diagnosis and approval.")
+            if incident == "bad_selector":
+                return self._restore_selector(proposal, approval, deployment, routing["service"])
+            # Atomic preconditions close the read/patch race for the fixed target.
             body = [
                 {"op": "test", "path": "/metadata/uid", "value": proposal.deployment_uid},
                 {"op": "test", "path": "/metadata/resourceVersion", "value": deployment.metadata.resource_version},
-                {"op": "test", "path": "/spec/template/spec/containers/0/image", "value": BAD_IMAGE},
-                {"op": "replace", "path": "/spec/template/spec/containers/0/image", "value": GOOD_IMAGE},
             ]
+            base = "/spec/template/spec/containers/0"
+            if incident == "bad_image":
+                body += [{"op": "test", "path": base + "/image", "value": BAD_IMAGE},
+                         {"op": "replace", "path": base + "/image", "value": GOOD_IMAGE}]
+            elif incident == "crashloop":
+                body += [{"op": "test", "path": base + "/command", "value": CRASH_COMMAND},
+                         {"op": "remove", "path": base + "/command"}]
+            elif incident == "oom":
+                body += [{"op": "test", "path": base + "/resources", "value": BAD_MEMORY},
+                         {"op": "replace", "path": base + "/resources", "value": GOOD_MEMORY}]
+            elif incident == "bad_env":
+                indexes = [i for i, e in enumerate(containers[0].env or []) if e.name == "DB_HOST"]
+                if len(indexes) != 1:
+                    raise RepairError("DB_HOST fixture is ambiguous; collect a new diagnosis.")
+                path = base + f"/env/{indexes[0]}"
+                body += [{"op": "test", "path": path, "value": {"name": "DB_HOST", "value": BAD_HOST}},
+                         {"op": "replace", "path": path + "/value", "value": "postgres"}]
             check_approval(proposal, approval)
             result = self.apps.patch_namespaced_deployment("api", NAMESPACE, body, _request_timeout=TIMEOUT)
             return {"action": proposal.action, "image": GOOD_IMAGE, "deployment_uid": result.metadata.uid,
@@ -92,6 +150,21 @@ class RestrictedRepairRunner:
             raise
         except Exception:
             raise RepairError("Repair rejected or unavailable; no automatic retry. Inspect the deployment and credentials.") from None
+
+    def _restore_selector(self, proposal, approval, deployment, service):
+        if service["uid"] != proposal.target_uid or service["resource_version"] != proposal.resource_version:
+            raise RepairError("Service changed since the proposal; collect a new diagnosis and approval.")
+        body = [
+            {"op": "test", "path": "/metadata/uid", "value": proposal.target_uid},
+            {"op": "test", "path": "/metadata/resourceVersion", "value": proposal.resource_version},
+            {"op": "test", "path": "/spec/selector", "value": BAD_SELECTOR},
+            {"op": "replace", "path": "/spec/selector", "value": GOOD_SELECTOR},
+        ]
+        check_approval(proposal, approval)
+        result = self.reader.core.patch_namespaced_service("api", NAMESPACE, body, _request_timeout=TIMEOUT)
+        return {"action": proposal.action, "deployment_uid": deployment.metadata.uid,
+                "generation": deployment.metadata.generation, "service_uid": result.metadata.uid,
+                "service_resource_version": result.metadata.resource_version}
 
     def verify(self, execution, timeout_seconds=90):
         deadline = time.monotonic() + timeout_seconds
@@ -106,15 +179,23 @@ class RestrictedRepairRunner:
                 if (deployment["uid"] != execution["deployment_uid"]
                     or deployment["generation"] != execution["generation"]
                     or deployment["desired_replicas"] != 1
-                    or deployment["containers"] != [{"name": "api", "image": GOOD_IMAGE, "image_pull_policy": "Never"}]):
+                    or len(deployment["containers"]) != 1 or not fixture_matches(deployment["containers"][0], "none")):
                     raise RepairError("Deployment changed during verification; recovery is not confirmed.")
+                routing = self.reader.get_api_routing()
+                if (routing["service"]["selector"] != GOOD_SELECTOR
+                    or (execution.get("service_uid") and routing["service"]["uid"] != execution["service_uid"])
+                    or (execution.get("service_resource_version")
+                        and routing["service"]["resource_version"] != execution["service_resource_version"])):
+                    raise RepairError("Service changed during verification; recovery is not confirmed.")
                 rollout = ((deployment["observed_generation"] or 0) >= deployment["generation"]
                            and all(deployment[key] == 1 for key in (
                                "replicas", "updated_replicas", "ready_replicas", "available_replicas"))
                            and len(owned) == 1 and owned[0]["phase"] == "Running"
                            and len(owned[0]["containers"]) == 1 and all(
                                c["name"] == "api" and c["image"] == GOOD_IMAGE and c["ready"]
-                               and not c["waiting_reason"] for c in owned[0]["containers"]))
+                               and not c["waiting_reason"] and fixture_matches(c, "none") for c in owned[0]["containers"])
+                           and {p["uid"] for p in owned} <= {e["pod_uid"] for e in routing["endpoints"]
+                                                                           if e["ready"] and not e["terminating"]})
                 if rollout:
                     with httpx.Client(timeout=5, transport=self.transport, trust_env=False) as http:
                         frontend = http.get("http://localhost:8080/")

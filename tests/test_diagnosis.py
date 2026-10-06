@@ -12,6 +12,7 @@ import httpx
 from agent.diagnosis import OpenRouterDiagnoser
 from agent.graph import build_graph
 from agent.models import Diagnosis
+from agent.fixtures import GOOD_MEMORY
 
 IMAGE = "incidentpilot-api:m1-does-not-exist"
 GOOD_IMAGE = "incidentpilot-api:m0"
@@ -19,7 +20,9 @@ GOOD_IMAGE = "incidentpilot-api:m0"
 
 def container(image=IMAGE, waiting="ErrImageNeverPull", ready=False):
     return {"name": "api", "image": image, "image_pull_policy": "Never", "ready": ready,
-            "restart_count": 0, "waiting_reason": waiting, "waiting_message": None}
+            "restart_count": 0, "waiting_reason": waiting, "waiting_message": None,
+            "db_host": "postgres", "startup_profile": "default", "resources": deepcopy(GOOD_MEMORY),
+            "terminated_reason": None, "last_terminated_reason": None, "last_exit_code": None}
 
 
 def pod(uid="failed-pod", image=IMAGE, waiting="ErrImageNeverPull", ready=False):
@@ -38,16 +41,20 @@ class FakeTools:
             "name": "api", "uid": "deployment-api", "generation": 5, "observed_generation": 5,
             "replicas": 2, "desired_replicas": 1, "updated_replicas": 1,
             "ready_replicas": 1, "available_replicas": 1,
-            "containers": [{"name": "api", "image": IMAGE, "image_pull_policy": "Never"}],
+            "containers": [{"name": "api", "image": IMAGE, "image_pull_policy": "Never",
+                            "db_host": "postgres", "startup_profile": "default", "resources": deepcopy(GOOD_MEMORY)}],
             "replica_sets": [{"name": "api-new", "uid": "rs-new", "containers": [{"name": "api", "image": IMAGE}]}],
         }
         self.events = [{"uid": "event-1", "type": "Warning", "reason": "ErrImageNeverPull",
                         "message": f'Container image "{IMAGE}" is not present with pull policy of Never',
                         "pod_uid": "failed-pod", "resource_kind": "Pod", "timestamp": "2026-10-06T10:00:00Z"}]
+        self.routing = {"service": {"name": "api", "uid": "service-api", "resource_version": "200", "selector": {"app": "api"}},
+                        "endpoints": []}
         if healthy:
             self.pods = [pod("healthy-pod", GOOD_IMAGE, None, True)]
             self.deployment["containers"][0]["image"] = GOOD_IMAGE
             self.deployment["replicas"] = 1
+            self.routing["endpoints"] = [{"pod_uid": "healthy-pod", "ready": True, "terminating": False}]
 
     async def call(self, name, arguments):
         self.calls.append((name, arguments))
@@ -56,6 +63,7 @@ class FakeTools:
         data = {"collected_at": "2026-10-06T10:00:01Z"}
         if name == "get_deployment":
             data["deployment"] = deepcopy(self.deployment)
+            data.update(deepcopy(self.routing))
         elif name == "get_pods":
             data["pods"] = deepcopy(self.pods)
         elif name == "get_events":

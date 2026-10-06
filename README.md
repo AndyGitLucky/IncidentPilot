@@ -10,6 +10,8 @@ Prometheus scrape. M1 adds a reproducible bad-image incident with manual injecti
 and deterministic restoration. M2 adds read-only MCP evidence collection and a
 LangGraph diagnosis using an OpenRouter LLM. M3 adds a fixed-image repair proposal,
 an explicit human approval gate, and automatic recovery verification.
+M4 extends that workflow to all five fixed incident classes, with replayable
+fixtures, runbooks, evidence checks, and a per-case evaluation artifact.
 
 ## Fresh checkout setup
 
@@ -146,8 +148,11 @@ uv run --frozen --extra agent python -m agent --output .local/diagnosis.json
 ```
 
 Diagnosis sends the demo pod/deployment state, current API resource events,
-and bounded API container logs to OpenRouter. Environment values, Kubernetes
-Secrets, kubeconfig credentials, and API keys are excluded from the evidence.
+and bounded API container logs to OpenRouter. M4 also includes Service/EndpointSlice
+routing, memory resources, termination state, and a classified startup profile.
+Only the known non-secret DB_HOST values `postgres` and `postgres-m4-missing`
+are projected; other environment values, Secret references/contents, kubeconfig
+credentials, arbitrary startup commands, and API keys are excluded.
 Each run makes one model request with a 2,048-token output limit and no automatic
 retries. Collection alone uses no API credits.
 
@@ -168,7 +173,8 @@ events paginate up to 500. Incomplete reads fail explicitly. Logs cap at 10 pods
 100 lines and 8 KB per container, from the last 10 minutes during diagnosis.
 The agent uses `.local/diagnosis-kubeconfig` and explicit `kind-incidentpilot`
 context, never the admin kubeconfig or ambient `KUBECONFIG`. Its Kubernetes
-ServiceAccount can read only demo pods, logs, events, deployments, and ReplicaSets.
+ServiceAccount can read only demo pods, logs, events, deployments, ReplicaSets,
+Services, and EndpointSlices.
 It cannot patch workloads, read Secrets, execute commands, or delete volumes.
 The token expires after one hour; rerun `setup-diagnosis.ps1` to refresh it.
 There is no repair tool or execution stage in M2.
@@ -203,7 +209,7 @@ Anything else, including EOF, denies execution. Each proposal expires after five
 minutes. The report is saved before the prompt and updated after the decision.
 The default command without `--repair` remains read-only.
 
-The only permitted action is `rollback_image_tag`: restore `deployment/api`'s
+For the bad-image fixture, the permitted action is `rollback_image_tag`: restore `deployment/api`'s
 `api` container from `incidentpilot-api:m1-does-not-exist` to
 `incidentpilot-api:m0`. Parameters are fixed by code rather than model output.
 The runner rechecks the live target and uses atomic JSON Patch preconditions;
@@ -213,10 +219,11 @@ An interrupted process cannot resume from a saved JSON report.
 
 MCP still uses `.local/diagnosis-kubeconfig`; only the approved runner opens
 `.local/repair-kubeconfig`. Neither uses admin credentials or ambient kubeconfig.
-The repair Role grants patch only on `deployment/api`, plus limited verification
-reads. It denies other deployments, Service edits, Secrets, exec, and deletion.
-RBAC restricts the target resource; the trusted runner enforces image-only
-patch contents. Refresh its one-hour token with `setup-repair.ps1`.
+The repair Role grants patch only on `deployment/api` and (since M4) `service/api`,
+plus limited verification reads. It denies other deployments/Services, Secrets,
+exec, and deletion. RBAC restricts the target resources; the trusted runner
+enforces each action's fixed patch contents. Refresh its one-hour token with
+`setup-repair.ps1`.
 
 Recovery requires exactly one updated/ready/available baseline API replica, an
 owned running baseline pod, and successful frontend, database health, and seeded
@@ -238,6 +245,78 @@ verified recovery. It also checks unrelated resources are unchanged and reruns
 the HTTP/Prometheus smoke check. Reports are `.local/m3/denied.json` and
 `approved.json`. Manual fixture cleanup runs in `finally` even if approval is
 denied or execution fails; this cleanup is separate from the agent workflow.
+
+## M4: five incident types
+
+Install the agent extra and refresh both Roles/tokens after updating the checkout:
+
+```powershell
+uv sync --frozen --extra agent
+.\scripts\setup-diagnosis.ps1
+.\scripts\setup-repair.ps1
+```
+
+| Fixture | Injection | Required symptoms | Fixed approved action |
+| --- | --- | --- | --- |
+| `bad_image` | Missing local image tag | Owned failed pod and matching `ErrImageNeverPull` Warning | `rollback_image_tag` |
+| `crashloop` | Startup command exits 1 | `CrashLoopBackOff`, restarts, matching BackOff Warning and failed-pod logs | `restart_deployment` |
+| `oom` | Memory request/limit reduced to 16Mi | `OOMKilled` termination and restarts in a non-ready owned pod | `increase_memory_limit_to_known_safe_value` |
+| `bad_env` | `DB_HOST=postgres-m4-missing` | Running non-ready owned pod and database-failure logs | `restore_known_env_value` |
+| `bad_selector` | Service selector `app=api-m4-missing` | Healthy baseline rollout/pods, no selected pods or ready endpoints | `restore_known_service_selector` |
+
+Each directory under `incidents/` contains `inject.ps1`, `restore.ps1`, ground
+truth, and expected evidence. Five short [runbooks](runbooks/) document checks,
+permitted actions, and verification; model retrieval remains a later comparison.
+The evaluator keeps ground truth out of the LLM prompt.
+
+For example, replay the OOM fixture manually:
+
+```powershell
+.\incidents\oom\inject.ps1
+uv run --frozen --extra agent python -m agent --repair --output .local/oom-repair.json
+.\incidents\oom\restore.ps1
+```
+
+Use the corresponding directory for the other incidents. Only one fixture may
+be active at a time; the scripts reject mixed or foreign configuration. Repeated
+injection and restoration are safe. A failed injection requires manual cleanup
+with that fixture's restore script. They always use this checkout's demo context.
+The four new scripts require uv and the agent extra; default timeout is 120s,
+adjustable with `-TimeoutSeconds`.
+
+Crashloop repair removes only the fixed injected startup command, which restarts
+the pod template using the image's normal entrypoint. OOM repair restores the
+known 64Mi memory request and 128Mi limit. Environment repair changes only the
+non-secret DB_HOST value. Selector repair changes only Service/api's selector,
+bound to its UID/resourceVersion. All actions require the exact current human
+approval phrase, recheck their fixed fixture, use atomic JSON Patch preconditions,
+and verify baseline rollout, owned ready endpoints, and database-backed HTTP.
+
+Run the live M4 evaluation (five OpenRouter requests, no agent writes):
+
+```powershell
+.\scripts\verify-incidents.ps1
+```
+
+It injects every fixture, checks repeat injection, validates the model diagnosis
+and proposal, denies the proposal, proves workload/Service/volume specs and
+unrelated pod identities did not change, manually restores twice, and runs the
+HTTP/database/Prometheus smoke check. Cleanup runs even if diagnosis fails.
+Reports and `.local/m4/results.json` record per-case success, timing, token usage,
+and failures. A failed case exits nonzero; cleanup failure stops further injection.
+Manual restoration is never counted as agent repair success.
+
+For local fixture/MCP validation without a provider request:
+
+```powershell
+.\scripts\verify-incidents.ps1 -FixturesOnly
+```
+
+That mode checks symptoms and recovery and leaves model accuracy unset. To also
+evaluate approved live agent execution, use `-HumanRepair`; it denies the first
+proposal, displays a fresh proposal, and requires human input for each incident.
+There is no automatic approval option. M4's single-pass evaluation does not
+replace M5's repeated benchmark, comparisons, traces, or dashboard.
 
 ## Inspect and reset
 
@@ -313,7 +392,10 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   and a live OpenRouter diagnosis with validated citations.
 - **M3 implemented:** cited fixed-image proposals, human approval, restricted
   repair runner, and automatic verification. Full live acceptance remains pending.
-- Next: finish M3 live acceptance before adding M4 incident types.
+- **M4 complete:** all five fixtures, evidence validation, fixed repair proposals,
+  runbooks, and live diagnosis/denial/manual recovery evaluation passed.
+- Next: interactive approved-repair acceptance, followed by M5 benchmarks and
+  observability. See the decision recording the user's explicit M4 request.
 
 ## Validation record
 
@@ -398,3 +480,29 @@ sequence. This is a single live M2 acceptance sequence, not the M5 benchmark.
   connection failed; test cleanup restored rollout/HTTP/Prometheus health.
   Automatic approval review rejected a network-enabled retry because it requires
   explicit authorization to export bounded demo evidence to OpenRouter.
+
+2026-10-06 M4 acceptance on the same Windows/amd64 kind cluster:
+
+- **187 tests passed** with one existing upstream Starlette/AnyIO warning.
+  Tests cover all five diagnosis classes, current UID/configuration/citation
+  correlation, rejection of mixed or substituted failures, exact approval and
+  dispatch, fixed patch contents, concurrent edits, reused/tampered/expired
+  proposals, endpoint ownership, and rollout/Service/database verification.
+- All PowerShell scripts parse; CLI help, manifest rendering, and diff checks pass.
+- Live RBAC checks confirm the reader cannot write or read Secrets. The runner
+  can patch only Deployment/api and Service/api; other workloads, Secrets, exec,
+  and PVC deletion remain denied.
+- Live evaluation with `openai/gpt-4.1-mini`: **5/5 supported diagnoses and
+  correct fixed repair proposals**. Every denial caused no writes; repeated
+  injection and manual restoration passed all health checks and preserved
+  unrelated workload/volume identities. A final healthy run returned
+  `no_active_incident`, with no proposal or approval request.
+- The provider-free fixture/MCP mode also passed all five cases, including
+  repeatability, unrelated-resource preservation and automatic recovery checks.
+- Non-sensitive summary: [M4 result artifact](eval/results/m4-2026-10-06.json).
+  Full per-case evidence stays in ignored `.local/m4`. These are single-pass
+  fixture/type-label results, not statistical benchmark claims.
+- Recovery in this live run used manual fixture restoration. Live approved agent
+  execution remains the explicit interactive `-HumanRepair` check; agent repair
+  success is deliberately unset in the summary. All approved paths pass offline
+  graph/runner tests. The cluster was left healthy.

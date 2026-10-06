@@ -1,0 +1,27 @@
+incident_id: oom
+incident_type: OOMKilled
+namespace: incidentpilot
+target:
+  kind: Deployment
+  name: api
+injection_script: incidents/oom/inject.ps1
+restore_script: incidents/oom/restore.ps1
+ground_truth_root_cause: >-
+  The API container memory request and limit are reduced to 16Mi, below its startup working set.
+observable_symptoms:
+  - "Current owned API container restarts, is not ready, and reports OOMKilled in its current or last termination state."
+  - "Deployment and failed pod both have the injected 16Mi request and limit."
+approved_repair_action:
+  action: increase_memory_limit_to_known_safe_value
+  parameters:
+    namespace: incidentpilot
+    deployment: api
+    container: api
+    memory_request: 64Mi
+    memory_limit: 128Mi
+  approval: Exact human approval of the current proposal is required for agent execution.
+verification_condition:
+  - API deployment uses the baseline image, startup command, DB_HOST and memory resources.
+  - Exactly one owned API pod is ready and the rollout has completed.
+  - Service/api selects app=api and has a ready endpoint for that owned pod.
+  - Frontend, database-backed HTTP and Prometheus smoke checks pass.

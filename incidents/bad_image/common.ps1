@@ -28,6 +28,15 @@ function Get-IncidentDeployment {
         $containers[0].imagePullPolicy -ne 'Never' -or $deployment.spec.replicas -ne 1) {
         throw 'API deployment does not match the M1 fixture. Inspect it or rerun scripts/setup.ps1.'
     }
+    $container = $containers[0]
+    $hosts = @($container.env | Where-Object { $_.name -eq 'DB_HOST' })
+    $service = (Invoke-IncidentKubectl @('get', 'service', 'api', '-o', 'json') | Out-String) | ConvertFrom-Json
+    if ($container.PSObject.Properties['command'] -or $container.PSObject.Properties['args'] -or
+        $hosts.Count -ne 1 -or -not $hosts[0].PSObject.Properties['value'] -or $hosts[0].value -ne 'postgres' -or
+        $container.resources.requests.memory -ne '64Mi' -or $container.resources.limits.memory -ne '128Mi' -or
+        @($service.spec.selector.PSObject.Properties).Count -ne 1 -or $service.spec.selector.app -ne 'api') {
+        throw 'Another incident or foreign configuration is active. Restore it before using the bad-image fixture.'
+    }
     return $deployment
 }
 

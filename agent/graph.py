@@ -6,6 +6,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.types import interrupt
 
 from agent.diagnosis import DiagnosisError, inconclusive, validate_diagnosis
@@ -128,7 +129,8 @@ def build_graph(tools, diagnoser, *, repair=False, runner_factory=RestrictedRepa
 
     def execute(state):
         try:
-            execution = runner_factory().rollback_image_tag(state["report"].proposal, state["approval"])
+            proposal = state["report"].proposal
+            execution = getattr(runner_factory(), proposal.action)(proposal, state["approval"])
             return update(state, "EXECUTE", execution=execution)
         except RepairError as error:
             return update(state, "EXECUTE", outcome="failed", error=str(error))
@@ -162,4 +164,7 @@ def build_graph(tools, diagnoser, *, repair=False, runner_factory=RestrictedRepa
         "REPORT" if state["report"].outcome == "failed" else "VERIFY"))
     graph.add_edge("VERIFY", "REPORT")
     graph.add_edge("REPORT", END)
-    return graph.compile(checkpointer=InMemorySaver())
+    serializer = JsonPlusSerializer(allowed_msgpack_modules=[
+        ("agent.models", "Evidence"), ("agent.models", "DiagnosisReport"), ("agent.models", "RepairReport"),
+    ])
+    return graph.compile(checkpointer=InMemorySaver(serde=serializer))

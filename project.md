@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0–M2 complete; M3 implemented, full live acceptance pending
+> **Project status:** M0–M2 and M4 complete; M3 implemented, interactive live repair acceptance pending
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -646,10 +646,12 @@ Deliver:
 proposals, a LangGraph human approval interrupt, separate narrowly scoped repair
 credentials, atomic known-image restoration, and rollout/database-backed HTTP
 verification. All 73 tests pass; live RBAC and healthy-state verification pass.
-Full live acceptance is pending authorization to send demo evidence to OpenRouter
-and approval of the resulting repair proposal. The initial provider connection
-failed; manual test cleanup restored the healthy cluster. See README and
-`scripts/verify-repair.ps1`. Do not begin M4 until M3 live acceptance passes.
+Full interactive live acceptance still requires human approval of a concrete
+repair proposal. OpenRouter export was authorized for M4 and all five live
+diagnoses/proposals/denials passed. The user explicitly requested M4 despite
+the older sequencing restriction; see the dated decision. See README and
+`scripts/verify-repair.ps1` for approved bad-image acceptance, or
+`scripts/verify-incidents.ps1 -HumanRepair` for all five approved repair paths.
 
 ---
 
@@ -658,6 +660,18 @@ failed; manual test cleanup restored the healthy cluster. See README and
 Add the remaining four incident classes.
 
 **Acceptance:** all five are reproducible and evaluated.
+
+**Status:** Complete, verified 2026-10-06. Added `crashloop`, `oom`, `bad_env`,
+and `bad_selector` fixtures, ground truth, expected evidence, and five runbooks.
+Extended read-only evidence validation and the five human-gated fixed repairs.
+All five live OpenRouter diagnoses and proposals passed; denying each proposal
+preserved resource specs/identities. Repeated injection and manual restoration
+passed rollout, owned endpoints, HTTP/database, and Prometheus checks without
+changing unrelated workloads or the PostgreSQL PVC. All 187 tests pass, including
+approved execution, atomic patch contents, stale/tampered approval, and recovery
+failures. Live approved agent execution remains the separate interactive check;
+manual recovery is not scored as agent repair success. See
+`eval/results/m4-2026-10-06.json` and `scripts/verify-incidents.ps1`.
 
 ---
 
@@ -693,7 +707,7 @@ Do not start with LangGraph before the failure is reproducible manually.
 
 Portfolio-ready means:
 
-- [ ] five incidents reproducible
+- [x] five incidents reproducible
 - [x] read-only evidence collection works
 - [x] structured diagnosis works
 - [x] repair requires approval
@@ -738,7 +752,7 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M2 are complete. Finish live M3 acceptance for the existing bad-image incident:
+M0–M2 and M4 are complete. Finish interactive live approved-repair acceptance:
 
 ```text
 cited diagnosis
@@ -748,7 +762,8 @@ cited diagnosis
 → rollout and application health verification
 ```
 
-Run `scripts/verify-repair.ps1` after provisioning both reader and repair tokens.
-No agent writes before approval. Keep read-only diagnosis credentials separate
-from the allowlisted repair runner. Do not add incident types until M3 acceptance
-passes.
+Run `scripts/verify-repair.ps1` for bad-image acceptance, or
+`scripts/verify-incidents.ps1 -HumanRepair` for all five repair paths, after
+provisioning both reader and repair tokens. No agent writes before approval.
+Keep read-only diagnosis credentials separate from the allowlisted repair runner.
+Then proceed to M5's repeated evaluation and observability; add no incident types.

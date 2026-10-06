@@ -13,6 +13,7 @@ from kubernetes import client
 from langgraph.types import Command
 
 from agent.graph import build_graph
+from agent.fixtures import GOOD_MEMORY
 from agent.models import Diagnosis, ModelResult, RepairProposal
 from agent.repair import (
     GOOD_IMAGE, RepairError, RestrictedRepairRunner, check_approval, proposal_id,
@@ -146,13 +147,16 @@ def deployment():
         metadata=client.V1ObjectMeta(uid="deployment-api", generation=5, resource_version="100"),
         spec=client.V1DeploymentSpec(replicas=1, selector=client.V1LabelSelector(match_labels={"app": "api"}),
             template=client.V1PodTemplateSpec(spec=client.V1PodSpec(containers=[
-                client.V1Container(name="api", image="incidentpilot-api:m1-does-not-exist", image_pull_policy="Never")]))),
+                client.V1Container(name="api", image="incidentpilot-api:m1-does-not-exist", image_pull_policy="Never",
+                                   env=[client.V1EnvVar(name="DB_HOST", value="postgres")],
+                                   resources=client.V1ResourceRequirements(**GOOD_MEMORY))]))),
     )
 
 
 def runner():
     result = RestrictedRepairRunner(client.ApiClient())
     result.apps = Mock()
+    result.reader.get_api_routing = Mock(return_value=FakeTools().routing)
     result.apps.read_namespaced_deployment.return_value = deployment()
     result.apps.patch_namespaced_deployment.return_value = SimpleNamespace(
         metadata=SimpleNamespace(uid="deployment-api", generation=6))
@@ -227,7 +231,8 @@ def test_patch_conflict_is_sanitized_and_never_retried():
     service.apps.patch_namespaced_deployment.assert_called_once()
 
 
-@pytest.mark.parametrize("case", ["healthy", "stalled", "bad_pod", "database_down", "changed"])
+@pytest.mark.parametrize("case", ["healthy", "stalled", "bad_pod", "database_down", "changed",
+                                  "wrong_selector", "no_endpoints", "wrong_endpoint", "changed_service", "bad_memory"])
 def test_verification_requires_owned_ready_baseline_rollout_and_database(case, monkeypatch):
     service = runner()
     tools = FakeTools(healthy=True)
@@ -235,12 +240,21 @@ def test_verification_requires_owned_ready_baseline_rollout_and_database(case, m
     service.reader = Mock()
     service.reader.get_deployment.return_value = {"deployment": tools.deployment}
     service.reader.get_pods.return_value = {"pods": tools.pods}
+    service.reader.get_api_routing.return_value = tools.routing
     if case == "stalled":
         tools.deployment["replicas"] = 2
     elif case == "bad_pod":
         tools.pods[0]["containers"][0]["ready"] = False
     elif case == "changed":
         tools.deployment["generation"] = 7
+    elif case == "wrong_selector":
+        tools.routing["service"]["selector"] = {"app": "missing"}
+    elif case == "no_endpoints":
+        tools.routing["endpoints"] = []
+    elif case == "wrong_endpoint":
+        tools.routing["endpoints"][0]["pod_uid"] = "unowned-pod"
+    elif case == "bad_memory":
+        tools.deployment["containers"][0]["resources"]["limits"]["memory"] = "16Mi"
 
     calls = []
 
@@ -258,13 +272,15 @@ def test_verification_requires_owned_ready_baseline_rollout_and_database(case, m
     monkeypatch.setattr("agent.repair.time.monotonic", lambda: next(clock))
     monkeypatch.setattr("agent.repair.time.sleep", lambda seconds: None)
     execution = {"deployment_uid": "deployment-api", "generation": 6}
+    if case == "changed_service":
+        execution["service_uid"] = "previous-service"
     if case == "healthy":
         assert service.verify(execution, timeout_seconds=1)["healthy"] is True
         assert calls == ["/", "/healthz", "/api/message"]
     else:
         with pytest.raises(RepairError):
             service.verify(execution, timeout_seconds=1)
-        if case in {"stalled", "bad_pod", "changed"}:
+        if case in {"stalled", "bad_pod", "changed", "wrong_selector", "no_endpoints", "wrong_endpoint", "changed_service", "bad_memory"}:
             assert not calls
 
 

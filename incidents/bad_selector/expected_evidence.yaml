@@ -1,0 +1,11 @@
+incident_id: bad_selector
+required_evidence:
+  - "service/api selector: app=api-m4-missing"
+  - "owned API pod labels: app=api"
+  - "deployment rollout: complete"
+  - "owned API containers: ready"
+  - "owned Service EndpointSlices: no ready nonterminating endpoints"
+limitations:
+  - Only one fixed fixture may be active at a time.
+  - Correlate current deployment-owned ReplicaSet and nonterminating pod UIDs.
+  - Historical events and unrelated pod logs cannot support the diagnosis.

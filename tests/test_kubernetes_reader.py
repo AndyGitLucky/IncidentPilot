@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+import json
 
 import pytest
 
@@ -8,6 +9,7 @@ from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
 from agent.kubernetes import KubernetesReader
+from agent.fixtures import CRASH_COMMAND, BAD_MEMORY
 
 
 @pytest.fixture
@@ -94,3 +96,75 @@ def test_pod_projection_omits_environment_and_secret_references(reader):
     assert result["pod"]["uid"] == "pod-uid"
     assert "PASSWORD" not in str(result)
     assert "do-not-share" not in str(result)
+
+
+def test_projection_exposes_only_known_host_values_and_classifies_commands(reader):
+    pod = k8s_pod()
+    c = pod.spec.containers[0]
+    c.command = CRASH_COMMAND
+    c.env = [client.V1EnvVar(name="DB_HOST", value="postgres-m4-missing"),
+             client.V1EnvVar(name="DB_PASSWORD", value="never-export"),
+             client.V1EnvVar(name="DB_USER", value_from=client.V1EnvVarSource(
+                 secret_key_ref=client.V1SecretKeySelector(name="private-secret", key="private-key")))]
+    c.resources = client.V1ResourceRequirements(**BAD_MEMORY)
+    projected = reader.pod_data(pod)
+    assert projected["containers"][0]["db_host"] == "postgres-m4-missing"
+    assert projected["containers"][0]["startup_profile"] == "crashloop_fixture"
+    assert projected["containers"][0]["resources"] == BAD_MEMORY
+    assert "never-export" not in str(projected)
+    assert "private-secret" not in str(projected)
+    c.env[0].value = "user-private-host"
+    c.command = ["python", "private-command"]
+    projected = reader.pod_data(pod)
+    assert projected["containers"][0]["db_host"] == "redacted_or_missing"
+    assert projected["containers"][0]["startup_profile"] == "custom"
+    assert "user-private-host" not in str(projected)
+    assert "private-command" not in str(projected)
+
+
+def test_last_oom_termination_is_retained_without_termination_message(reader):
+    pod = k8s_pod(started=True)
+    status = pod.status.container_statuses[0]
+    status.last_state = client.V1ContainerState(terminated=client.V1ContainerStateTerminated(
+        exit_code=137, reason="OOMKilled", message="private-termination-message"))
+    status.restart_count = 2
+    c = reader.pod_data(pod)["containers"][0]
+    assert c["last_terminated_reason"] == "OOMKilled"
+    assert c["last_exit_code"] == 137
+    assert "private-termination-message" not in str(c)
+
+
+def test_crashloop_reads_previous_container_logs_even_without_container_id(reader):
+    pod = k8s_pod()
+    status = pod.status.container_statuses[0]
+    status.state.waiting.reason = "CrashLoopBackOff"
+    status.last_state = client.V1ContainerState(terminated=client.V1ContainerStateTerminated(exit_code=1, reason="Error"))
+    reader.core.list_namespaced_pod.return_value = pod_list(pod)
+    reader.core.read_namespaced_pod_log.return_value = "timestamp IncidentPilot crashloop fixture: startup failed"
+    result = reader.search_logs("api", 10)
+    assert result["entries"][0]["status"] == "available"
+    assert reader.core.read_namespaced_pod_log.call_args.kwargs["previous"] is True
+
+
+def test_routing_ignores_endpointslices_not_owned_by_current_service(reader):
+    reader.discovery = MagicMock()
+    reader.core.read_namespaced_service.return_value = client.V1Service(
+        metadata=client.V1ObjectMeta(name="api", uid="service-current", resource_version="10"),
+        spec=client.V1ServiceSpec(selector={"app": "api"}, ports=[client.V1ServicePort(port=8000, target_port="http")]))
+    def endpoint_slice(owner):
+        return client.V1EndpointSlice(address_type="IPv4", metadata=client.V1ObjectMeta(
+            owner_references=[client.V1OwnerReference(api_version="v1", kind="Service", name="api", uid=owner, controller=True)]),
+            endpoints=[client.V1Endpoint(addresses=["10.0.0.1"], conditions=client.V1EndpointConditions(ready=True),
+                                         target_ref=client.V1ObjectReference(kind="Pod", uid=owner + "-pod"))])
+    slices = client.ApiClient().sanitize_for_serialization(client.V1EndpointSliceList(
+        items=[endpoint_slice("service-current"), endpoint_slice("service-old")], metadata=client.V1ListMeta()))
+    response = reader.discovery.list_namespaced_endpoint_slice.return_value
+    response.data = json.dumps(slices).encode()
+    data = reader.get_api_routing()
+    assert data["endpoints"] == [{"pod_uid": "service-current-pod", "ready": True, "terminating": False}]
+    assert data["service"]["resource_version"] == "10"
+    assert reader.discovery.list_namespaced_endpoint_slice.call_args.kwargs["limit"] == 100
+    slices["items"][0]["endpoints"] = None
+    response.data = json.dumps(slices).encode()
+    assert reader.get_api_routing()["endpoints"] == []
+    assert response.release_conn.call_count == 2

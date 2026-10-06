@@ -1,0 +1,26 @@
+incident_id: crashloop
+incident_type: CrashLoopBackOff
+namespace: incidentpilot
+target:
+  kind: Deployment
+  name: api
+injection_script: incidents/crashloop/inject.ps1
+restore_script: incidents/crashloop/restore.ps1
+ground_truth_root_cause: >-
+  The API startup command exits with status 1 before serving HTTP.
+observable_symptoms:
+  - "Current owned API pod is waiting in CrashLoopBackOff with restart_count > 0 and last_exit_code 1."
+  - "A matching Warning BackOff event and failed-pod logs name the fixed startup failure."
+approved_repair_action:
+  action: restart_deployment
+  parameters:
+    namespace: incidentpilot
+    deployment: api
+    container: api
+    startup: image_default
+  approval: Exact human approval of the current proposal is required for agent execution.
+verification_condition:
+  - API deployment uses the baseline image, startup command, DB_HOST and memory resources.
+  - Exactly one owned API pod is ready and the rollout has completed.
+  - Service/api selects app=api and has a ready endpoint for that owned pod.
+  - Frontend, database-backed HTTP and Prometheus smoke checks pass.
