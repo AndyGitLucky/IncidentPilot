@@ -561,3 +561,64 @@ No application, dependency, provider attribution, or incident-type changes.
   human approval. The live export approval does not approve repairs.
 - Remaining portfolio checks stay in `project.md` Definition of Done. Keep the
   five fixed incidents and existing safety boundary; add no unrelated systems.
+
+## 2026-10-06 — M5: approved live repair metrics published
+
+The user requested the next repair evaluation. Confirmed healthy demo state,
+refreshed reader and separate repair credentials, and checked RBAC: the reader
+cannot patch API while the allowlisted runner can patch deployment/api and
+Service/api. Started the existing two-repetition benchmark with observability
+and interactive `-HumanRepair`, using the authorized bounded OpenRouter evidence
+export. The user individually approved nine exact fresh proposals in this chat;
+each approval was delivered only to its pending process prompt.
+
+All 33 A/B/C comparisons passed with correct supported diagnoses, denied
+comparison proposals, no writes during comparison, and no unnecessary healthy
+proposals. Ten additional fresh structured diagnoses generated nine supported
+repair proposals. All nine human-approved repairs recovered, covering every one
+of the five fixed actions, and passed independent immediate regression checks.
+
+The second crashloop fresh diagnosis was blocked: the failed pod was between
+restarts with startup profile crashloop_fixture, prior exit code 1 and restart
+count 2, but no current CrashLoopBackOff waiting state. The evidence validator
+rejected the model claim, no proposal/approval/execution occurred, and manual
+cleanup restored that episode. Preserve this measured blocked opportunity;
+no retry or validator change was made to improve the published score.
+
+Results: **9/9 approved recoveries, 9/10 opportunities with agent recovery,
+0/9 immediate regressions**, mean approved-agent MTTR **50.189 s** including
+comparison and human waiting. Per-incident recovery means: bad image 47.618 s,
+crashloop 50.672 s (one approved attempt), OOM 71.289 s, bad environment 42.140 s,
+selector 39.469 s. Every other class had two approved attempts. All 11 episodes
+restored health and preserved unrelated resources. The completed evaluation
+exited successfully; its exit does not imply ten agent repairs.
+
+Independently checked all 33 comparison report schemas/scores, ten fresh
+diagnoses, nine fresh proposal hashes against the actual approved IDs, execution
+identity/generation, recovered outcomes, and regression rows. Recomputed
+aggregates and denominators. All 878 local trace spans had no error status,
+including 43 diagnosis spans and exactly nine execute/verify pairs. Grafana's
+12-panel dashboard and both proxies passed: ten injected incidents, 33 correct
+comparison diagnoses, nine successful repairs, and the final stored trace.
+Zero telemetry export errors; fresh frontend/database/Prometheus smoke checks
+and all seven deployment readiness checks passed. Existing test baseline is
+229 passing tests; no source or dependency changes were made.
+
+The 43 requests consumed 314,563 comparison tokens and 98,328 fresh-diagnosis
+tokens. Published the non-sensitive summary, per-incident denominators, blocked
+case, request accounting, and validation in
+`eval/results/m5-repair-2026-10-06.json`. Raw reports and traces stay ignored in
+`.local/m5/20261006-154813`; previous result artifacts remain unchanged. Updated
+README, decisions, project status and Definition of Done. Added the bounded
+fresh-evidence reliability idea to Parking Lot without implementing it.
+
+### Current handoff
+
+- **M0–M5 complete; diagnosis and approved repair metrics published.** Cluster
+  healthy, separate safety credentials retained, and all five fixed repairs
+  verified live. No past approval can authorize another proposal.
+- Next unfinished portfolio criterion: an implementation-accurate architecture
+  diagram in README, followed by a timed human-approved demo and verification
+  of current clean-checkout instructions.
+- Preserve the blocked crashloop opportunity and all metric denominators. Keep
+  the five fixed incidents and existing safety boundary; add no unrelated systems.

@@ -494,9 +494,50 @@ complete; raw reports and traces remain ignored under
 `.local/m5/20261006-153954`. The earlier restricted attempt received no model
 responses and remains separately saved under `.local/m5/20261006-153707`.
 
-Approved repair measurements remain the next unfinished step and require
-interactive `-HumanRepair` decisions for each fresh proposal. Evidence-export
-authorization does not approve a repair; manual cleanup never counts as agent
+2026-10-06 approved repair results from a separate run of
+`scripts/benchmark.ps1 -Repetitions 2 -Observability -HumanRepair`:
+
+| Incident | Repair opportunities | Approved / recovered | Blocked fresh proposals | Mean approved-agent recovery |
+|---|---:|---:|---:|---:|
+| Bad image | 2 | 2 / 2 | 0 | 47.618 s |
+| Crashloop | 2 | 1 / 1 | 1 | 50.672 s |
+| OOMKilled | 2 | 2 / 2 | 0 | 71.289 s |
+| Broken DB_HOST | 2 | 2 / 2 | 0 | 42.140 s |
+| Invalid Service selector | 2 | 2 / 2 | 0 | 39.469 s |
+| Total | 10 | 9 / 9 | 1 | 50.189 s |
+
+The [approved repair result artifact](eval/results/m5-repair-2026-10-06.json)
+records **9/9 successful approved repairs**, **9/10 opportunities with agent
+recovery**, and **0/9 immediate regressions**. Every executed proposal was fresh
+and individually approved by the user; all five fixed actions recovered live.
+Mean agent MTTR includes injection, symptom detection, the A/B/C comparisons,
+fresh diagnosis, human waiting, and verification. It is measured over the nine
+approved recoveries, not over the manually restored blocked episode.
+
+The second crashloop's fresh pod detail was sampled between restarts: it had
+the injected startup profile and prior exit code 1, but no current
+`CrashLoopBackOff` waiting state. The deterministic validator blocked the model's
+claim and no approval or execution occurred. Manual fixture cleanup restored
+that episode. Keep this opportunity in the published denominator; the benchmark
+exited successfully as a completed evaluation, which does not imply ten agent
+repairs. Immediate regression checks cover post-repair rollout, endpoints,
+frontend, database-backed HTTP, and Prometheus health; they do not measure
+long-term reliability.
+
+All 33 read-only comparisons again produced correct supported results, with no
+unapproved writes or unnecessary healthy-control proposals. Ten fresh repair
+diagnoses add ten requests: 43 requests total, 314,563 comparison tokens and
+98,328 fresh-diagnosis tokens. All 11 episodes preserved unrelated resources.
+The run exported 878 trace spans without errors; Grafana's proxies returned ten
+injected incidents, 33 correct comparison diagnoses, nine successful repairs,
+and the final trace. Final smoke checks passed and all seven deployments were
+ready. Raw reports and traces remain ignored under `.local/m5/20261006-154813`.
+The earlier diagnosis-only and provider-free artifacts remain unchanged.
+
+Diagnosis and repair metrics are now published. The remaining portfolio checks
+are the implementation architecture diagram, a timed human-approved demo, and
+verification of the current clean-checkout instructions. Every future repair
+still requires a fresh exact approval; manual cleanup never counts as agent
 repair success.
 
 ## Inspect and reset
@@ -578,8 +619,9 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   runbooks, and live diagnosis/denial/manual recovery evaluation passed.
 - **M5 complete:** provider-free and explicitly authorized live repeated
   benchmarks, published A/B/C diagnosis metrics, OpenTelemetry/Tempo traces,
-  and one Grafana dashboard verified. Approved repair benchmark metrics remain
-  unmeasured. See the M5 result artifacts and `scripts/benchmark.ps1`.
+  and one Grafana dashboard verified. Approved repair performance is published:
+  9/9 approved recoveries, 9/10 opportunities, and zero immediate regressions.
+  See the M5 result artifacts and `scripts/benchmark.ps1`.
 
 ## Validation record
 

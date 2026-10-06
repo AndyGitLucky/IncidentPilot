@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0–M5 complete; live A/B/C diagnosis results published; approved repair benchmark and portfolio checks remain
+> **Project status:** M0–M5 complete; diagnosis and approved repair metrics published; portfolio checks remain
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -702,6 +702,20 @@ Grafana's metrics and trace proxies returned the live run. All 229 tests pass.
 See `eval/results/m5-live-2026-10-06.json` and README results. This small sample
 does not establish statistical reliability or an accuracy benefit from runbooks.
 
+Approved repair evaluation, verified 2026-10-06:
+`scripts/benchmark.ps1 -Repetitions 2 -Observability -HumanRepair` completed
+33 A/B/C comparisons and ten fresh structured repair diagnoses. The user approved
+nine exact fresh proposals across all five classes; all nine recovered and passed
+independent immediate regression checks. Mean agent recovery was 50.189 s,
+including comparison and human waiting. One repeated crashloop snapshot lacked
+the required current BackOff state, so evidence validation blocked its proposal;
+that episode recovered by manual cleanup only. Agent recovery covered 9/10
+opportunities, with 9/9 success among approved attempts. All 11 episodes preserved
+unrelated resources; 878 trace spans and Grafana metrics/traces were verified,
+with zero export errors. See `eval/results/m5-repair-2026-10-06.json`. The
+diagnosis-only run above keeps its repair metrics unset; this separate artifact
+publishes the measured repair results without hiding the blocked opportunity.
+
 Earlier provider-free acceptance, verified 2026-10-06:
 `scripts/benchmark.ps1` repeats all five fixtures, supports raw/structured/runbook
 comparisons over identical captured evidence, and saves results, metrics table,
@@ -740,7 +754,7 @@ Portfolio-ready means:
 - [x] repairs use allowlisted actions
 - [x] recovery is automatically verified
 - [x] benchmark is reproducible (provider-free and live A/B/C repeated acceptance)
-- [ ] diagnosis/repair metrics published (diagnosis published; approved repair benchmark pending)
+- [x] diagnosis/repair metrics published (9/9 approved recoveries; 9/10 opportunities)
 - [x] traces visible
 - [x] dashboard works
 - [ ] architecture diagram exists
@@ -764,6 +778,8 @@ Portfolio-ready means:
 - chaos framework
 - cloud deployment
 - Kubernetes operator
+- bounded fresh-evidence rechecks when crashing pods transition between BackOff
+  states, retaining deterministic validation and a new exact repair approval
 
 ---
 
@@ -778,20 +794,23 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M5 are complete. The explicitly authorized live A/B/C benchmark, diagnosis
-metrics, OpenTelemetry traces, Grafana dashboard, and README results are verified.
-The next unfinished measurement is approved live repair performance across the
-five fixtures. Use the existing interactive mode with fresh proposals:
+M0–M5 are complete. Live A/B/C diagnosis and approved repair metrics are published;
+all five classes have verified approved recovery. The repeated repair benchmark
+records nine approved recoveries and one blocked fresh proposal out of ten
+opportunities. The cluster is healthy, with metrics and traces verified.
+
+Next unfinished portfolio criterion: add an implementation-accurate architecture
+diagram to README. Show the actual local MCP evidence readers, OpenRouter
+diagnosis, LangGraph approval gate, separate allowlisted repair runner, recovery
+verification, and local observability stack. Then finish the remaining checks:
 
 ```text
-refresh reader and separate runner credentials
-→ scripts/benchmark.ps1 -Repetitions 2 -Observability -HumanRepair
-→ human reviews and approves each exact fresh proposal
-→ publish measured repair success, MTTR, and regression checks
+implementation-accurate architecture diagram
+→ timed human-approved demo under five minutes
+→ verify current clean-checkout instructions
 ```
 
-Keep the five fixed incidents and existing safety boundary. The live benchmark's
-export authorization does not approve any repair. Every agent repair still
-requires human approval; read-only diagnosis credentials remain separate from
-the allowlisted repair runner. After measurements, finish the remaining portfolio
-checks in Definition of Done. Add no incident types or unrelated systems.
+Keep the five fixed incidents and existing safety boundary. Every agent repair
+requires approval of its exact fresh proposal; prior approvals cannot be reused.
+Read-only diagnosis credentials remain separate from the allowlisted repair
+runner. Add no incident types or unrelated systems.

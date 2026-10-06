@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-10-06: Publish approved repair measurements with blocked opportunities
+
+The user requested the next repair benchmark after the live diagnosis results.
+Run the existing two-repetition `-HumanRepair` mode, retaining bounded evidence
+export, separate reader/runner credentials, and exact approval for each fresh
+proposal. The user individually approved nine proposals; no blanket repair
+approval or saved approval was used. All five fixed actions recovered live.
+
+Publish approved-attempt success (9/9) alongside recovery per planned opportunity
+(9/10). The second crashloop's fresh pod detail lacked the required current
+`CrashLoopBackOff` waiting state, so deterministic validation rejected the claim,
+produced no proposal, and manual fixture cleanup restored it. Do not weaken the
+validator, silently rerun that episode, exclude it from opportunity counts, or
+score cleanup as agent repair. The existing benchmark's successful exit means
+evaluation completion, not that every opportunity yielded an approved repair.
+
+Mean MTTR is over nine approved recoveries and includes comparison and human
+waiting. Regression is the existing immediate independent health check only.
+Keep raw evidence ignored and publish a separate non-sensitive repair artifact,
+preserving previous diagnosis-only/provider-free results. Record bounded
+fresh-evidence rechecks as a future reliability idea without changing the
+allowlist or validation rules in this measurement task. No MVP scope change.
+
 ## 2026-10-06: M5 live evidence export authorized and comparison complete
 
 The user explicitly approved sending bounded local demo Kubernetes state,
