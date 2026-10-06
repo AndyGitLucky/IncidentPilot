@@ -329,3 +329,44 @@ validation passed. The existing source/test baseline remains 188 passing tests.
 - Next: **M5 — repeated evaluation, metrics table, OpenTelemetry traces, one
   Grafana dashboard and README results**. Maintain the five fixed incidents and
   human approval for every agent repair.
+
+## 2026-10-06 — M5: repeated evaluation and local observability
+
+Implemented `scripts/benchmark.ps1` / `eval.benchmark` with repeated five-fixture
+episodes, a healthy control, raw/structured/runbook comparison modes, identical
+captured evidence, rotated order, deterministic keyword retrieval, candidate and
+validated scoring, explicit missing values/denominators, and partial-result
+artifacts. Default proposals are denied; every episode restores its fixed fixture
+and checks rollout, endpoints, database-backed HTTP, Prometheus, and unrelated
+resources. Optional human repair collects fresh evidence/proposals and retains
+the exact approval gate and separate runner. Manual cleanup never scores as agent
+repair success. Model errors are measurements; harness/safety/export failures
+exit nonzero and cleanup failure stops later injection.
+
+Added opt-in OpenTelemetry graph/tool/stage spans, local sanitized JSONL export,
+OTLP HTTP export, Prometheus counters/gauges/histograms, and pinned optional
+Grafana/Tempo/Pushgateway manifests in a separate namespace. Provisioned one
+12-panel dashboard with the existing Prometheus and local Tempo. Setup records
+hidden loopback port-forward helpers under `.local/observability`.
+
+Validation: **229 tests pass** (41 new M5 tests); PowerShell scripts parse,
+Kustomize renders/applies, lock checks and diff checks pass. Two repeated live
+provider-free benchmark runs passed; the final run includes 10 incident episodes
+plus one healthy control with supported symptoms, no writes during collection,
+verified manual recovery, and preserved unrelated resources. Mean detection
+3.720 s, mean manual cleanup 8.355 s, P50/P95 episode duration 11.610/15.813 s.
+No telemetry export errors. Prometheus scraped the ten-incident counter, Grafana
+provisioned the dashboard, and both Grafana data-source proxies returned real
+metrics/stored traces. All seven demo/observability deployments are ready.
+
+Saved non-sensitive summary `eval/results/m5-2026-10-06.json`; raw reports,
+metrics exposition, and local traces remain ignored in
+`.local/m5/fixtures-final-2026-10-06`. Updated README, decisions, and project status.
+
+Automatic approval review rejected the requested live OpenRouter comparison
+because this session did not specifically approve the Kubernetes evidence payload
+and external destination. No live model call was made, and no workaround was
+attempted. Finish live A/B/C results only after explicit export approval; current
+diagnosis accuracy/token/agent-repair metrics are deliberately unset. Optional
+approved-repair evaluation remains interactive. M5 implementation and local
+acceptance are complete; its live-model acceptance remains pending.

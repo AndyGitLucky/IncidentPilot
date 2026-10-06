@@ -91,11 +91,8 @@ class OpenRouterDiagnoser:
             "model": self.model, "temperature": 0, "max_tokens": 2048,
             "provider": {"require_parameters": True},
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": json.dumps(
-                    {"target": "deployment/api", "evidence": [e.model_dump(mode="json", exclude={"observation"}) for e in evidence]},
-                    ensure_ascii=False,
-                )},
+                {"role": "system", "content": self.system_prompt(evidence)},
+                {"role": "user", "content": self.evidence_prompt(evidence)},
             ],
             "response_format": {"type": "json_schema", "json_schema": {
                 "name": "incident_diagnosis", "strict": True, "schema": Diagnosis.model_json_schema(),
@@ -122,13 +119,23 @@ class OpenRouterDiagnoser:
                     known_reason = reason if reason in {"length", "content_filter", "error", "tool_calls"} else "unknown"
                     raise DiagnosisError(f"OpenRouter did not return a complete diagnosis (finish reason: {known_reason})")
                 diagnosis = Diagnosis.model_validate_json(choice["message"]["content"])
-                usage = {name: int(body.get("usage", {}).get(name, 0))
-                         for name in ("prompt_tokens", "completion_tokens", "total_tokens")}
+                usage = {name: int(body["usage"][name]) for name in
+                         ("prompt_tokens", "completion_tokens", "total_tokens")
+                         if isinstance(body.get("usage"), dict) and body["usage"].get(name) is not None}
+                if any(value < 0 for value in usage.values()):
+                    raise DiagnosisError("OpenRouter returned invalid token usage")
                 return ModelResult(diagnosis=diagnosis, model=body.get("model", self.model), usage=usage)
         except httpx.HTTPError:
             raise DiagnosisError("OpenRouter is unreachable or timed out") from None
         except (KeyError, IndexError, TypeError, ValueError, ValidationError):
             raise DiagnosisError("OpenRouter returned an invalid structured diagnosis") from None
+
+    def system_prompt(self, evidence):
+        return SYSTEM_PROMPT
+
+    def evidence_prompt(self, evidence):
+        return json.dumps({"target": "deployment/api", "evidence": [
+            e.model_dump(mode="json", exclude={"observation"}) for e in evidence]}, ensure_ascii=False)
 
 
 def inconclusive(evidence: list[Evidence], reason: str) -> Diagnosis:

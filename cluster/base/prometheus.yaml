@@ -10,6 +10,10 @@ data:
       - job_name: demo-api
         static_configs:
           - targets: [api:8000]
+      - job_name: incidentpilot-benchmark
+        honor_labels: true
+        static_configs:
+          - targets: [pushgateway.incidentpilot-observability.svc.cluster.local:9091]
 ---
 apiVersion: apps/v1
 kind: Deployment

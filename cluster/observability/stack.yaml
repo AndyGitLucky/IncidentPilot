@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: incidentpilot-observability
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pushgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: pushgateway}
+  template:
+    metadata:
+      labels: {app: pushgateway}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: pushgateway
+          image: prom/pushgateway:v1.11.1
+          ports: [{name: http, containerPort: 9091}]
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pushgateway
+spec:
+  selector: {app: pushgateway}
+  ports: [{name: http, port: 9091, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: tempo}
+  template:
+    metadata:
+      labels: {app: tempo}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {fsGroup: 10001}
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.9.0
+          args: [-config.file=/etc/tempo/tempo.yaml]
+          ports:
+            - {name: http, containerPort: 3200}
+            - {name: otlp-http, containerPort: 4318}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+          volumeMounts:
+            - {name: config, mountPath: /etc/tempo, readOnly: true}
+            - {name: data, mountPath: /var/tempo}
+      volumes:
+        - name: config
+          configMap: {name: tempo-config}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  selector: {app: grafana}
+  ports: [{name: http, port: 3000, targetPort: http}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+spec:
+  selector: {app: tempo}
+  ports:
+    - {name: http, port: 3200, targetPort: http}
+    - {name: otlp-http, port: 4318, targetPort: otlp-http}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: grafana}
+  template:
+    metadata:
+      labels: {app: grafana}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {fsGroup: 472}
+      containers:
+        - name: grafana
+          image: grafana/grafana:12.2.0
+          ports: [{name: http, containerPort: 3000}]
+          env:
+            - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "true"}
+            - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Viewer}
+            - {name: GF_AUTH_DISABLE_LOGIN_FORM, value: "true"}
+            - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
+            - {name: GF_SECURITY_ADMIN_PASSWORD, value: incidentpilot-local-demo}
+            - {name: GF_ANALYTICS_REPORTING_ENABLED, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_UPDATES, value: "false"}
+            - {name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES, value: "false"}
+            - {name: GF_PLUGINS_PREINSTALL_DISABLED, value: "true"}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /api/health, port: http}
+          volumeMounts:
+            - {name: provisioning, mountPath: /etc/grafana/provisioning/datasources/datasources.yaml, subPath: datasources.yaml, readOnly: true}
+            - {name: provisioning, mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml, subPath: dashboards.yaml, readOnly: true}
+            - {name: dashboard, mountPath: /var/lib/grafana/dashboards, readOnly: true}
+            - {name: data, mountPath: /var/lib/grafana}
+      volumes:
+        - name: provisioning
+          configMap: {name: grafana-provisioning}
+        - name: dashboard
+          configMap: {name: grafana-dashboard}
+        - name: data
+          emptyDir: {}

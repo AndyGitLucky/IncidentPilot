@@ -1,0 +1,103 @@
+{
+  "uid": "incidentpilot",
+  "title": "IncidentPilot",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "refresh": "5s",
+  "time": {"from": "now-30m", "to": "now"},
+  "tags": ["incidentpilot"],
+  "links": [{"title": "Explore traces in Tempo", "url": "/explore", "type": "link"}],
+  "panels": [
+    {
+      "id": 1, "title": "Active incident", "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "incident_active > 0", "legendFormat": "{{incident_type}}", "instant": true}],
+      "fieldConfig": {"defaults": {"noValue": "None"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "name"}
+    },
+    {
+      "id": 2, "title": "API scrape health", "type": "stat",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "up{job=\"demo-api\"}", "instant": true}],
+      "fieldConfig": {"defaults": {"min": 0, "max": 1, "noValue": "No scrape", "mappings": [{"type": "value", "options": {"0": {"text": "Down"}, "1": {"text": "Up"}}}]}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}}
+    },
+    {
+      "id": 3, "title": "API pods (latest evidence snapshot)", "type": "stat",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "demo_pods", "legendFormat": "{{status}}", "instant": true}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "value_and_name"}
+    },
+    {
+      "id": 4, "title": "Current diagnosis stage", "type": "stat",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "diagnosis_stage > 0", "legendFormat": "{{stage}}", "instant": true}],
+      "fieldConfig": {"defaults": {"noValue": "Idle"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "name"}
+    },
+    {
+      "id": 5, "title": "API request error rate", "type": "timeseries",
+      "gridPos": {"x": 0, "y": 5, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "sum(rate(demo_api_requests_total{outcome=\"error\"}[1m])) / clamp_min(sum(rate(demo_api_requests_total[1m])), 0.000001)", "legendFormat": "error fraction"}],
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}, "overrides": []}
+    },
+    {
+      "id": 6, "title": "Latest approved agent MTTR", "type": "stat",
+      "description": "Includes diagnosis and human waiting. No value until an approved repair succeeds.",
+      "gridPos": {"x": 12, "y": 5, "w": 6, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "agent_mttr_seconds > 0", "instant": true}],
+      "fieldConfig": {"defaults": {"unit": "s", "noValue": "Not measured"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}}
+    },
+    {
+      "id": 7, "title": "Latest manual cleanup duration", "type": "stat",
+      "gridPos": {"x": 18, "y": 5, "w": 6, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "manual_recovery_seconds > 0", "instant": true}],
+      "fieldConfig": {"defaults": {"unit": "s", "noValue": "Not measured"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}}
+    },
+    {
+      "id": 8, "title": "Latest agent actions (Unix timestamps)", "type": "table",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "agent_last_action_timestamp_seconds", "instant": true, "format": "table"}],
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true}, "renameByName": {"Value": "Last observed (Unix seconds)"}}}]
+    },
+    {
+      "id": 9, "title": "Latest trace ID (copy to Explore → Tempo)", "type": "table",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "agent_latest_trace", "instant": true, "format": "table"}],
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true, "__name__": true, "job": true, "instance": true}}}]
+    },
+    {
+      "id": 10, "title": "Supported diagnoses", "type": "stat",
+      "gridPos": {"x": 0, "y": 19, "w": 8, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "diagnosis_correct_total", "legendFormat": "{{mode}}", "instant": true}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "value_and_name"}
+    },
+    {
+      "id": 11, "title": "Tool reads (cached comparisons shown separately)", "type": "stat",
+      "gridPos": {"x": 8, "y": 19, "w": 8, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "sum by (result) (tool_call_total)", "legendFormat": "{{result}}", "instant": true}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "value_and_name"}
+    },
+    {
+      "id": 12, "title": "Reported provider tokens", "type": "stat",
+      "gridPos": {"x": 16, "y": 19, "w": 8, "h": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"refId": "A", "expr": "sum by (mode) (tokens_total)", "legendFormat": "{{mode}}", "instant": true}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}, "textMode": "value_and_name"}
+    }
+  ]
+}

@@ -12,6 +12,8 @@ LangGraph diagnosis using an OpenRouter LLM. M3 adds a fixed-image repair propos
 an explicit human approval gate, and automatic recovery verification.
 M4 extends that workflow to all five fixed incident classes, with replayable
 fixtures, runbooks, evidence checks, and a per-case evaluation artifact.
+M5 adds repeated benchmarks, three diagnosis comparison modes, metrics tables,
+OpenTelemetry traces, and one local Grafana dashboard.
 
 ## Fresh checkout setup
 
@@ -320,6 +322,139 @@ proposal, displays a fresh proposal, and requires human input for each incident.
 There is no automatic approval option. M4's single-pass evaluation does not
 replace M5's repeated benchmark, comparisons, traces, or dashboard.
 
+## M5 benchmark and observability
+
+Run the complete repeated benchmark with one script, after demo setup and
+refreshing the read-only credentials:
+
+```powershell
+uv sync --frozen --extra agent
+.\scripts\setup-diagnosis.ps1
+.\scripts\benchmark.ps1 -Repetitions 2
+```
+
+The live command sends bounded demo evidence to OpenRouter and incurs provider
+usage. Two repetitions make 33 requests: three healthy controls plus three
+comparisons for each of ten injected episodes. Every episode captures one MCP
+snapshot and replays it identically to A (`raw`, generic prompt and flattened
+observations), B (`structured`, the existing evidence-aware workflow), and C
+(`runbook`, B plus keyword-ranked retrieval of two of the five runbooks). The
+comparison order rotates between repetitions. Retrieval receives observations,
+never the injected label or ground-truth files. This measures prompt/evidence
+representation and retrieval, rather than dynamic model tool selection.
+
+The default denies all proposals and restores each fixed fixture manually. To
+measure approved live repairs, refresh the separate runner credentials with
+`scripts/setup-repair.ps1`, then add `-HumanRepair`. After the three comparisons,
+each episode collects fresh evidence for a new structured proposal and asks for
+the exact `approve <id>` input. Its extra request/token usage is saved separately.
+Denial, expiry, or a stopped process never authorizes a write. Run benchmarks
+alone: concurrent setup, injection, or repair invalidates preservation checks.
+
+For a reproducible local check that makes **no provider requests**:
+
+```powershell
+.\scripts\benchmark.ps1 -Repetitions 2 -FixturesOnly
+```
+
+Each invocation creates a separate `.local/m5/<UTC timestamp>` directory. Use
+`-Output <new-directory>` for a fixed destination; an existing result is never
+overwritten. The directory contains:
+
+- `results.json`: per-episode outcomes, comparison scores, aggregate metrics,
+  denominators, timing, trace IDs, and limitations. It is updated after each
+  comparison/cleanup so partial failures remain inspectable.
+- `metrics.md`: the comparison metrics table; `N/A` means not measured.
+- `metrics.prom`: Prometheus exposition for the current run.
+- `traces.jsonl`: OpenTelemetry span IDs, parent relationships, names, timing,
+  and sanitized attributes. Logs, evidence payloads, credentials, and exception
+  bodies are excluded from spans.
+- Per-episode evidence/diagnosis/proposal reports under `00-none`, `01-bad_image`,
+  etc. These stay ignored; only non-sensitive summaries belong in Git.
+
+Accuracy uses all attempted incident comparisons, including failed requests.
+Candidate accuracy and validated accuracy are separate. Root-cause scoring is
+incident-type label matching. Top-2 recall uses the primary label and the first
+explicit alternative incident key. Evidence completeness is coverage of cited
+required blocks (deployment, failed pod, matching events/logs as applicable);
+the existing validator separately checks current resource correlation. A wrong
+or unsupported model answer is a completed measurement; infrastructure failures,
+unapproved writes, cleanup failures, or requested telemetry export failures make
+the script exit nonzero. Cleanup failure stops further injection.
+
+MTTD measures injection to observed fixture symptoms. MTTDg measures symptom
+detection to a supported diagnosis, including waiting behind earlier comparisons.
+Comparison latency is also reported separately. Agent MTTR measures injection to
+verified approved recovery, including human waiting; manual cleanup time is a
+separate metric. Repair success uses only approved attempts, regression uses
+immediate independent post-repair checks, and unnecessary proposal rate uses the
+healthy controls. Denied/manual-only runs leave agent repair/MTTR/regression
+unset. Missing provider usage is missing data, with token coverage reported.
+Percentiles use nearest rank; two runs per fixture are descriptive and do not
+establish statistical reliability. Physical snapshot reads and logical replay
+reads have separate counts.
+
+To see the benchmark in the local observability stack:
+
+```powershell
+.\scripts\setup-observability.ps1
+.\scripts\benchmark.ps1 -Repetitions 2 -FixturesOnly -Observability
+```
+
+Open [the IncidentPilot dashboard](http://127.0.0.1:13000/d/incidentpilot/incidentpilot).
+It shows the active fixture, live API scrape health and error rate, latest API pod
+snapshot, diagnosis stage, approved-agent MTTR, manual cleanup duration, latest
+actions, tool/token counts, and the latest trace ID. Copy a trace ID into Grafana
+**Explore → Tempo → Trace ID** to view its hierarchy. Fixture-only traces include
+injection, symptom detection, reads, and cleanup; live comparisons also trace
+graph diagnosis, proposal, approval, and approved execution/verification stages.
+
+Setup provisions pinned Grafana, single-binary Tempo, and Pushgateway in the
+separate `incidentpilot-observability` namespace. It updates the existing
+Prometheus scrape configuration before a benchmark. Loopback-only port forwards
+are recorded under `.local/observability`: Grafana `13000`, Tempo OTLP `14318`,
+Tempo query API `13200`, and Pushgateway `19091`. Rerun setup if a forward stops.
+Viewer access is anonymous for this local demo. Grafana's public local admin
+fixture password is `incidentpilot-local-demo`; all stack storage is disposable,
+and trace/Prometheus retention is one hour. No external telemetry is configured.
+Benchmark pushes replace one fixed Pushgateway job, so the dashboard describes
+the latest run; old series are not accumulated per run.
+
+The implementation follows the official [OpenTelemetry exporter setup](https://opentelemetry.io/docs/languages/python/exporters/),
+[Tempo local deployment](https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/deploy/locally/linux/),
+and [Prometheus batch-job Pushgateway guidance](https://prometheus.github.io/client_python/exporting/pushgateway/).
+
+2026-10-06 provider-free M5 results:
+
+| Metric | Result |
+|---|---:|
+| Repetitions per incident | 2 |
+| Correlated incident symptoms and verified manual recovery | 10/10 |
+| Healthy controls | 1/1 |
+| Read-only collection and unrelated-resource preservation | 11/11 |
+| Mean time to detect fixture symptoms | 3.720 s |
+| Mean manual cleanup duration | 8.355 s |
+| P50 / P95 incident duration (including cleanup) | 11.610 / 15.813 s |
+| Mean shared MCP calls per episode, including control | 5.727 |
+| Telemetry export errors | 0 |
+| Live A/B/C model scores, tokens, approved repair success / MTTR | Not measured |
+
+The [M5 result artifact](eval/results/m5-2026-10-06.json) contains the individual
+episodes and metric definitions. **229 tests passed**, including offline mocked
+provider comparisons for all five incidents in all three modes, missing-token
+handling, exact approval/fresh evidence, regression checks, failure artifacts,
+trace privacy/parentage, and stopping after cleanup failure. PowerShell parsing,
+manifest rendering, dependency-lock checks, and `git diff --check` pass.
+Prometheus scraped `incident_total = 10`; both Grafana data-source proxies returned
+real metrics/stored Tempo traces. All demo and observability deployments are ready.
+
+Automatic approval review rejected the live A/B/C benchmark because it exports
+Kubernetes incident evidence to OpenRouter and this request did not explicitly
+authorize that payload/destination. No live model request was made in M5. Obtain
+explicit approval before running/publishing that comparison; do not interpret
+fixture checks or mock provider tests as model accuracy. Approved live repair
+metrics additionally require interactive `-HumanRepair` decisions.
+
 ## Inspect and reset
 
 The checkout's kubeconfig is isolated in `.local/kubeconfig`. In a new terminal:
@@ -397,8 +532,10 @@ kubectl kustomize cluster/base --load-restrictor LoadRestrictionsNone
   resources verified by the corrected acceptance script.
 - **M4 complete:** all five fixtures, evidence validation, fixed repair proposals,
   runbooks, and live diagnosis/denial/manual recovery evaluation passed.
-- Next: M5 benchmarks and observability. See the decision recording the user's
-  explicit M4 request before M3's live acceptance was finished.
+- **M5 implemented:** repeated benchmark, A/B/C comparison harness, metrics
+  table, local OpenTelemetry/Tempo traces, and one Grafana dashboard. Repeated
+  provider-free acceptance passes; live model comparison needs evidence-export
+  approval. See the M5 validation record and `scripts/benchmark.ps1`.
 
 ## Validation record
 

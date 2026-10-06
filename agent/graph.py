@@ -12,6 +12,7 @@ from langgraph.types import interrupt
 from agent.diagnosis import DiagnosisError, inconclusive, validate_diagnosis
 from agent.models import DiagnosisReport, Evidence, RepairReport
 from agent.repair import RepairError, RestrictedRepairRunner, check_approval, propose_repair
+from telemetry.runtime import CURRENT, instrument_node, span
 
 
 class AgentState(TypedDict, total=False):
@@ -26,11 +27,15 @@ async def collect_evidence(tools):
 
     async def read(name, arguments, source="kubernetes"):
         try:
-            data = await tools.call(name, arguments)
+            with span(name, tool=name):
+                data = await tools.call(name, arguments)
             error = False
         except Exception:
             data = {"error": f"{name} unavailable; check demo resources and read-only credentials"}
             error = True
+        telemetry = CURRENT.get()
+        if telemetry:
+            telemetry.tools.labels(name, "error" if error else ("cached" if getattr(tools, "cached", False) else "success")).inc()
         item = Evidence(
             id=f"e{len(evidence) + 1}", source=source,
             query=f"{name}({json.dumps(arguments, sort_keys=True)})",
@@ -89,8 +94,11 @@ def build_graph(tools, diagnoser, *, repair=False, runner_factory=RestrictedRepa
         )}
 
     graph = StateGraph(AgentState)
-    graph.add_node("COLLECT", collect)
-    graph.add_node("HYPOTHESIZE", hypothesize)
+    def add_node(name, function):
+        graph.add_node(name, instrument_node(name, function))
+
+    add_node("COLLECT", collect)
+    add_node("HYPOTHESIZE", hypothesize)
     graph.add_edge(START, "COLLECT")
     graph.add_edge("COLLECT", "HYPOTHESIZE")
     if not repair:
@@ -148,12 +156,12 @@ def build_graph(tools, diagnoser, *, repair=False, runner_factory=RestrictedRepa
         except Exception:
             return update(state, "VERIFY", outcome="failed", error="Recovery verification failed.", verification={"healthy": False})
 
-    graph.add_node("TEST", test)
-    graph.add_node("PROPOSE_FIX", propose)
-    graph.add_node("WAIT_FOR_APPROVAL", approve)
-    graph.add_node("EXECUTE", execute)
-    graph.add_node("VERIFY", verify)
-    graph.add_node("REPORT", lambda state: update(state, "REPORT"))
+    add_node("TEST", test)
+    add_node("PROPOSE_FIX", propose)
+    add_node("WAIT_FOR_APPROVAL", approve)
+    add_node("EXECUTE", execute)
+    add_node("VERIFY", verify)
+    add_node("REPORT", lambda state: update(state, "REPORT"))
     graph.add_edge("HYPOTHESIZE", "TEST")
     graph.add_edge("TEST", "PROPOSE_FIX")
     graph.add_conditional_edges("PROPOSE_FIX", lambda state: (

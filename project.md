@@ -1,6 +1,6 @@
 # IncidentPilot — Autonomous Kubernetes Incident Response Agent
 
-> **Project status:** M0–M4 complete; next milestone: M5 — Evaluation + Observability
+> **Project status:** M0–M4 complete; M5 implemented and locally validated; live model benchmark awaits evidence-export approval
 > **Primary goal:** Build a controlled incident-response agent that diagnoses reproducible Kubernetes failures, proposes a repair with evidence, requires human approval, executes a limited repair action, and verifies recovery.
 
 ---
@@ -689,6 +689,19 @@ Deliver:
 
 **Acceptance:** one script runs the benchmark and produces a result artifact.
 
+**Status:** Implemented, provider-free acceptance verified 2026-10-06.
+`scripts/benchmark.ps1` repeats all five fixtures, supports raw/structured/runbook
+comparisons over identical captured evidence, and saves results, metrics table,
+Prometheus exposition, and OpenTelemetry traces. Two repetitions (10 incidents)
+plus a healthy control passed symptom, read-only, recovery, and unrelated-resource
+checks. Grafana's single dashboard and both Prometheus/Tempo data sources work;
+local OTLP traces and the ten-incident counter were verified. All 229 tests pass.
+See `eval/results/m5-2026-10-06.json` and README results. Automatic approval review
+rejected live OpenRouter export; live A/B/C scores require explicit permission to
+send bounded demo evidence to that destination. Fixture checks are not model
+accuracy, and manual cleanup is not approved agent repair success. Those metrics
+remain unset; M5's live-model acceptance is pending.
+
 ---
 
 # 18. First Five Commits
@@ -715,10 +728,10 @@ Portfolio-ready means:
 - [x] repair requires approval
 - [x] repairs use allowlisted actions
 - [x] recovery is automatically verified
-- [ ] benchmark is reproducible
+- [x] benchmark is reproducible (provider-free repeated acceptance; live comparison pending)
 - [ ] diagnosis/repair metrics published
-- [ ] traces visible
-- [ ] dashboard works
+- [x] traces visible
+- [x] dashboard works
 - [ ] architecture diagram exists
 - [ ] demo completes in <5 minutes
 - [ ] clean checkout instructions work
@@ -754,14 +767,14 @@ Portfolio-ready means:
 
 # 22. Immediate Next Action
 
-M0–M4 are complete. Implement M5 — Evaluation + Observability:
+M0–M4 are complete. M5 implementation and provider-free repeated benchmark,
+OpenTelemetry traces, Grafana dashboard, and README results are verified.
+Finish the pending live comparison after explicit evidence-export approval:
 
 ```text
-repeated incident runs
-→ benchmark result artifact and metrics table
-→ OpenTelemetry traces
-→ one Grafana dashboard
-→ README results
+permission to send bounded demo evidence to OpenRouter
+→ scripts/benchmark.ps1 -Repetitions 2 -Observability
+→ publish actual A/B/C diagnosis metrics and README results
 ```
 
 Keep the five fixed incidents and existing safety boundary. Every agent repair

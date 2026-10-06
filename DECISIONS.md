@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10-06: M5 benchmark and observability
+
+Implement the requested M5 across the existing five fixtures. Repeat each case
+with A (flattened evidence and a generic raw prompt), B (the existing structured
+workflow), and C (B plus deterministic keyword retrieval over the five runbooks).
+Rotate comparison order across repetitions; never select a runbook using the
+injected incident label. All modes receive the same bounded MCP projections and
+use the same model and deterministic safety validator. A is a raw-prompt baseline
+over sanitized evidence, not unrestricted cluster access. Score candidate and
+validated outputs separately and include failed attempts in denominators.
+
+Default evaluation denies every repair proposal and uses manual fixture cleanup.
+Agent repair/MTTR/regression metrics stay null unless a human approves the exact
+fresh proposal interactively. Measure manual recovery separately. Healthy controls
+measure unnecessary proposals. Top-2 uses explicit incident keys in alternatives;
+evidence completeness measures cited required checks, not arbitrary citation count.
+
+Use OpenTelemetry SDK spans with local JSONL export on every benchmark and optional
+OTLP HTTP export to a local single-binary Tempo. Export benchmark Prometheus metrics
+through Pushgateway, appropriate for this finite batch job, with a fixed grouping
+key replaced on every run. Provision one Grafana dashboard with Prometheus and
+Tempo data sources. Store this optional stack in a separate observability namespace
+so it does not affect demo resource-preservation checks. No cloud telemetry,
+database, new incident, arbitrary repair, or automatic approval is introduced.
+Keep dependency versions locked and raw evidence under ignored .local/m5; publish
+only aggregate metrics and trace IDs. These are choices within M5's existing scope.
+
+Automatic approval review rejected the M5 live-model run because this session's
+M5 implementation request did not specifically authorize exporting Kubernetes
+incident evidence to OpenRouter. Do not bypass that rejection using historical
+authorization or another command. Finish provider-free repeated acceptance,
+local telemetry validation, docs, and tests; ask for explicit bounded-evidence
+export approval before executing/publishing live A/B/C results. Keep model and
+agent-repair metrics unset in the provider-free result.
+
 ## 2026-10-06: M0 local environment
 
 - Use **kind** only, with Docker running Linux containers. Pin kind to v0.33.0
