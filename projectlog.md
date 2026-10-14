@@ -654,3 +654,19 @@ This documentation-only task did not run the benchmark or execute repairs.
   minutes, followed by verification of the current clean-checkout instructions.
 - Keep the five fixed incidents, separate reader/runner credentials, and exact
   fresh approval for every repair.
+
+## 2026-10-15 — Public GitHub repository
+
+Created the public repository `https://github.com/AndyGitLucky/IncidentPilot`
+at the user's request, retaining the existing `main` branch and Git history.
+The checkout uses that repository as `origin` for publication and future pushes.
+
+Before publication, scanned all 206 unique historical file blobs for common
+API-token, private-key, and embedded Kubernetes client-credential patterns;
+no matches were found. Confirmed `.env`, `.local` kubeconfigs, local tools, and
+the virtual environment are excluded by `.gitignore`. The untracked `start.txt`
+remains a local note. No application code, dependencies, or runtime state changed;
+runtime tests and live repairs were not repeated for this publication task.
+
+The remaining portfolio checks are still the timed human-approved demo under
+five minutes and verification of the current clean-checkout instructions.
